@@ -200,7 +200,7 @@ export default function ResidentHome() {
           </View>
           <View style={styles.serviceGrid}>
             {services.map((service) => (
-              <TouchableOpacity key={service.title} activeOpacity={0.82} style={[styles.serviceCard, { width: compact ? "100%" : "48.4%" }]} onPress={() => router.navigate(service.route)}>
+              <TouchableOpacity key={service.title} activeOpacity={0.82} style={styles.serviceCard} onPress={() => router.navigate(service.route)}>
                 <View style={[styles.serviceIcon, { backgroundColor: `${service.color}16` }]}><Ionicons name={service.icon} size={25} color={service.color} /></View>
                 <Text style={styles.serviceTitle}>{service.title}</Text>
                 <Text style={styles.serviceSubtitle}>{service.subtitle}</Text>
@@ -278,8 +278,8 @@ const styles = StyleSheet.create({
   sectionTitle: { color: "#213d27", fontSize: 16, fontWeight: "900" },
   sectionHint: { color: "#7d877f", marginTop: 2, fontSize: 9 },
   viewAll: { color: "#2e7d32", fontSize: 10, fontWeight: "900" },
-  serviceGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10, marginBottom: 23 },
-  serviceCard: { position: "relative", minHeight: 139, padding: 14, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#e0e8e1", elevation: 3 },
+  serviceGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10, marginBottom: 23 },
+  serviceCard: { position: "relative", width: "48.4%", aspectRatio: 1, padding: 14, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#e0e8e1", elevation: 3 },
   serviceIcon: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 14 },
   serviceTitle: { color: "#293a2d", marginTop: 10, paddingRight: 20, fontSize: 13, fontWeight: "900" },
   serviceSubtitle: { color: "#818a83", marginTop: 3, paddingRight: 13, fontSize: 8, lineHeight: 12 },
