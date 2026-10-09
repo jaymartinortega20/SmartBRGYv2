@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useLocalSearchParams, useRouter } from "expo-router";
 import GradientHeader from "../../components/GradientHeader";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { translateAnnouncement } from "../../lib/ai";
@@ -108,6 +109,9 @@ const countdownLabel = (item) => {
 export default function Announcement() {
   const [announcements, setAnnouncements] = useState([]);
   const [selected, setSelected] = useState(null);
+  const router = useRouter();
+  const { announcementId } = useLocalSearchParams();
+  const requestedId = Array.isArray(announcementId) ? announcementId[0] : announcementId;
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [loading, setLoading] = useState(true);
@@ -153,6 +157,13 @@ export default function Announcement() {
       supabase.removeChannel(channel);
     };
   }, [loadAnnouncements]);
+
+  // Opened from a notification: show that announcement right away.
+  useEffect(() => {
+    if (!requestedId || !announcements.length) return;
+    const match = announcements.find((item) => String(item.id) === String(requestedId));
+    if (match) setSelected(match);
+  }, [requestedId, announcements]);
 
   const categories = useMemo(() => {
     const uniqueTypes = new Map();
@@ -318,7 +329,13 @@ export default function Announcement() {
         </ScrollView>
       </SafeAreaView>
 
-      <AnnouncementModal item={selected} onClose={() => setSelected(null)} />
+      <AnnouncementModal
+        item={selected}
+        onClose={() => {
+          setSelected(null);
+          if (requestedId) router.setParams({ announcementId: undefined });
+        }}
+      />
     </ImageBackground>
   );
 }

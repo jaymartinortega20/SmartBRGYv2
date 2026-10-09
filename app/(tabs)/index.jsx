@@ -160,9 +160,10 @@ export default function ResidentHome() {
           eyebrow="MAAYONG ADLAW"
           title={`Hello, ${firstName}!`}
           subtitle="Barangay Tubod, Toledo City"
+          avatar={{ uri: user.profilePic || null, onPress: () => router.push("/profile") }}
           actions={[
             { icon: "notifications-outline", onPress: () => router.push("/notifications"), badge: unread, label: "Notifications" },
-            { icon: "person-circle-outline", onPress: () => router.push("/profile"), label: "Profile" },
+            { icon: "settings-outline", onPress: () => router.push("/settings"), label: "Settings" },
           ]}
         />
         <ScrollView
