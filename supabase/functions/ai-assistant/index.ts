@@ -58,7 +58,7 @@ async function callGemini(system: string, messages: ChatMessage[], maxTokens: nu
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
     console.error("Gemini API error", response.status, result?.error?.message);
-    throw new Error(response.status === 429 || response.status === 503 ? "AI_BUSY" : "AI_FAILED");
+    throw new Error(response.status === 429 || response.status === 503 ? "AI_BUSY" : [400, 401, 403, 404].includes(response.status) ? "AI_BAD_KEY_OR_MODEL" : "AI_FAILED");
   }
   const parts = result?.candidates?.[0]?.content?.parts || [];
   return parts
@@ -84,7 +84,7 @@ async function callClaude(system: string, messages: ChatMessage[], maxTokens: nu
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
     console.error("Claude API error", response.status, result?.error?.message);
-    throw new Error(response.status === 429 || response.status === 529 ? "AI_BUSY" : "AI_FAILED");
+    throw new Error(response.status === 429 || response.status === 529 ? "AI_BUSY" : [400, 401, 403, 404].includes(response.status) ? "AI_BAD_KEY_OR_MODEL" : "AI_FAILED");
   }
   return (result?.content || [])
     .filter((block: { type: string }) => block.type === "text")
@@ -131,7 +131,10 @@ Deno.serve(async (request) => {
     if (!["chat", "report_assist", "translate"].includes(mode)) return reply({ error: "Unknown assistant mode." }, 400);
 
     const { data: allowed, error: quotaError } = await service.rpc("ai_consume_quota", { p_user_id: userId, p_daily_limit: DAILY_LIMIT });
-    if (quotaError) throw quotaError;
+    if (quotaError) {
+      console.error("ai_consume_quota failed", quotaError.message);
+      return reply({ error: "The assistant needs a database update. Ask the administrator to run migration_009_fixes_and_ai.sql." }, 503);
+    }
     if (!allowed) {
       return reply({ error: `You have reached today's limit of ${DAILY_LIMIT} assistant requests. Please try again tomorrow or use the Help Desk.` }, 429);
     }
@@ -256,6 +259,7 @@ ${JSON.stringify(context)}`;
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
     if (code === "AI_NOT_CONFIGURED") return reply({ error: "The assistant is not set up yet. Please contact the barangay administrator." }, 503);
+    if (code === "AI_BAD_KEY_OR_MODEL") return reply({ error: "The assistant's AI key or model setting is not valid. Ask the administrator to check GEMINI_API_KEY and AI_MODEL." }, 503);
     if (code === "AI_BUSY") return reply({ error: "The assistant is busy right now. Please try again in a minute." }, 503);
     console.error("ai-assistant failure", error);
     return reply({ error: "The assistant is temporarily unavailable. Please try again or use the Help Desk." }, 500);
