@@ -18,7 +18,7 @@ SmartBRGY is the Barangay Tubod resident mobile app. It connects to the existing
 - Barangay Help Desk conversations with guided categories and admin replies
 - In-app notification center plus opt-in Android/iOS push notifications
 - Resident Profile and Settings for profile correction, security, notification permission, support, privacy information, and sign out
-- SmartBRGY Assistant (Claude AI): barangay Q&A in Bisaya/Tagalog/English, incident-report drafting, announcement translation, and Help Desk hand-off
+- SmartBRGY Assistant (AI — free Gemini tier or Claude): barangay Q&A in Bisaya/Tagalog/English, incident-report drafting, announcement translation, and Help Desk hand-off
 
 The old standalone Book Appointment module is intentionally removed. Requested face-to-face meetings are handled inside Incident Reports.
 
@@ -63,7 +63,7 @@ npx supabase functions deploy send-push --no-verify-jwt
 npx supabase functions deploy ai-assistant
 ```
 
-The AI assistant needs a Claude API key: `npx supabase secrets set ANTHROPIC_API_KEY=...`. See `supabase/functions/ai-assistant/README.md`.
+The AI assistant needs an AI key. Free option: `npx supabase secrets set GEMINI_API_KEY=...` (key from aistudio.google.com). See `supabase/functions/ai-assistant/README.md`.
 
 Set a long random `PUSH_WEBHOOK_SECRET` for `send-push`, then create an INSERT database webhook from `public.notifications` to that function with the same `x-smartbrgy-webhook-secret` header. Full details are in `supabase/functions/send-push/README.md`.
 
