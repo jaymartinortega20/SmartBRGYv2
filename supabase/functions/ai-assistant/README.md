@@ -1,35 +1,43 @@
-# SmartBRGY AI assistant (Claude)
+# SmartBRGY AI assistant
 
 Powers three features in the resident app:
 
-- **SmartBRGY Assistant** chat (Home → "Ask the SmartBRGY Assistant", and from the Help Desk tab). Answers questions about documents, fees, requirements, announcements and the resident's own request status, in Bisaya, Tagalog or English. Can hand a concern off to the Help Desk.
+- **SmartBRGY Assistant** chat (Home → "Ask the SmartBRGY Assistant", and from the Help Desk tab). Answers questions about documents, fees, requirements and announcements in Bisaya, Tagalog or English, and can hand a concern off to the Help Desk.
 - **Help me write this report** on the Report tab: turns the resident's own words into a draft of the incident form.
 - **Translate & summarize** inside each announcement.
 
-The Claude API key is stored only as a Supabase secret. The app never sees it.
+The API key is stored only as a Supabase secret. The app never sees it.
 
-## Setup
+## Free setup (Google Gemini free tier) — recommended
 
-1. Run `supabase/migration_009_fixes_and_ai.sql` in the Supabase SQL Editor (creates the daily usage limit table).
-2. Create an API key at https://console.anthropic.com (Settings → API Keys) and add billing credit.
+1. Run `supabase/migration_009_fixes_and_ai.sql` in the Supabase SQL Editor.
+2. Go to https://aistudio.google.com/apikey, sign in with a Google account, and click **Create API key**. No credit card is needed.
 3. From the project root:
 
 ```bash
-npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-...your-key...
+npx supabase secrets set GEMINI_API_KEY=your-gemini-key
 npx supabase functions deploy ai-assistant
 ```
 
-Deploy **with** JWT verification (the default): only signed-in residents can call it.
+Free-tier notes:
+- Free usage has daily and per-minute limits. If many residents use it at once, some will see "The assistant is busy right now" and can retry. `AI_DAILY_LIMIT` (default 40 per resident per day) helps share the free quota.
+- Google may use free-tier requests to improve its products. Because of this, the assistant does **not** send residents' names or their request/report/ticket records in free mode; it points residents to the Documents, Report and Help Desk tabs for status questions. Messages residents type themselves are still sent, so residents should not type sensitive personal details.
+
+## Paid setup (Claude)
+
+```bash
+npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+npx supabase secrets set AI_PROVIDER=claude
+npx supabase functions deploy ai-assistant
+```
+
+With Claude, the assistant can also answer "what is the status of my requests?" using the resident's own records.
 
 ## Optional settings
 
 ```bash
-# Daily requests per resident (default 40)
-npx supabase secrets set AI_DAILY_LIMIT=40
-# Claude model (default claude-haiku-5-5: fast and low-cost)
-npx supabase secrets set AI_MODEL=claude-haiku-5-5
+npx supabase secrets set AI_DAILY_LIMIT=40          # requests per resident per day
+npx supabase secrets set AI_MODEL=gemini-3.5-flash  # or e.g. gemini-3.5-flash-lite (higher free limits), claude-haiku-5-5
 ```
 
-## What the assistant can see
-
-Only data the resident is already allowed to see: active document types and fees, the latest 8 announcements, and that resident's own document requests, incident reports and Help Desk tickets. It cannot change any record.
+If Google or Anthropic retires a model, set `AI_MODEL` to a current one; no app rebuild is needed.
