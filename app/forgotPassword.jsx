@@ -19,6 +19,7 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { GRADIENT } from "../constants/theme";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -146,7 +147,7 @@ export default function ForgotPassword() {
                 accessibilityRole="button"
               >
                 <LinearGradient
-                  colors={["#2e7d32", "#43a047"]}
+                  colors={GRADIENT}
                   style={styles.buttonGradient}
                 >
                   {sending ? (
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 22,
     backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 22,
+    borderRadius: 16,
     elevation: 7,
     shadowColor: "#153c1c",
     shadowOpacity: 0.15,

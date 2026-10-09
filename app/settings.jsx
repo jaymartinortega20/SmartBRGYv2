@@ -19,6 +19,7 @@ import * as ExpoLinking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 
+import GradientHeader from "../components/GradientHeader";
 import { supabase } from "../lib/supabase";
 import {
   disablePushNotificationsAsync,
@@ -99,11 +100,7 @@ export default function Settings() {
   return (
     <ImageBackground source={require("../assets/images/background-bg.jpg")} style={styles.bg}>
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.back} onPress={() => router.back()}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
-          <View style={styles.headerCopy}><Text style={styles.headerEyebrow}>SMARTBRGY ACCOUNT</Text><Text style={styles.headerTitle}>Settings</Text></View>
-          <View style={styles.headerIcon}><Ionicons name="settings" size={22} color="#fff" /></View>
-        </View>
+        <GradientHeader eyebrow="SMARTBRGY ACCOUNT" title="Settings" onBack actions={[]} />
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.accountCard}>
             <View style={styles.accountAvatar}><Text style={styles.accountLetter}>{(user.name || "R").charAt(0).toUpperCase()}</Text></View>
@@ -155,21 +152,21 @@ const styles = StyleSheet.create({
   bg: { flex: 1 }, safe: { flex: 1 }, loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#f2f6f2" },
   header: { minHeight: 72, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: "#246f32", elevation: 5 },
   back: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 13, backgroundColor: "rgba(255,255,255,0.14)" },
-  headerCopy: { flex: 1 }, headerEyebrow: { color: "#cfe8d2", fontSize: 7, fontWeight: "900", letterSpacing: 1 }, headerTitle: { color: "#fff", marginTop: 3, fontSize: 20, fontWeight: "900" },
+  headerCopy: { flex: 1 }, headerEyebrow: { color: "#cfe8d2", fontSize: 10, fontWeight: "900", letterSpacing: 1 }, headerTitle: { color: "#fff", marginTop: 3, fontSize: 20, fontWeight: "900" },
   headerIcon: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 13, backgroundColor: "rgba(255,255,255,0.14)" },
   content: { padding: 16, paddingBottom: 38 },
   accountCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 15, marginBottom: 17, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dce7de", elevation: 3 },
   accountAvatar: { width: 46, height: 46, alignItems: "center", justifyContent: "center", borderRadius: 15, backgroundColor: "#2e7d32" }, accountLetter: { color: "#fff", fontSize: 18, fontWeight: "900" },
-  accountCopy: { flex: 1 }, accountName: { color: "#27372b", fontSize: 13, fontWeight: "900" }, accountEmail: { color: "#7c867e", marginTop: 3, fontSize: 9 },
-  section: { marginBottom: 17 }, sectionTitle: { color: "#47604c", marginLeft: 4, marginBottom: 7, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 },
-  sectionCard: { overflow: "hidden", borderRadius: 17, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 2 },
+  accountCopy: { flex: 1 }, accountName: { color: "#27372b", fontSize: 13, fontWeight: "900" }, accountEmail: { color: "#7c867e", marginTop: 3, fontSize: 11 },
+  section: { marginBottom: 17 }, sectionTitle: { color: "#47604c", marginLeft: 4, marginBottom: 7, fontSize: 11, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 },
+  sectionCard: { overflow: "hidden", borderRadius: 16, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 2 },
   settingRow: { minHeight: 68, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 13, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#edf1ed" },
   toggleRow: { minHeight: 80, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 13, paddingTop: 12 },
   last: { borderBottomWidth: 0 }, rowIcon: { width: 39, height: 39, alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: "#eaf6ec" },
-  rowCopy: { flex: 1, minWidth: 0 }, rowTitle: { color: "#2c3b30", fontSize: 11, fontWeight: "900" }, rowHint: { color: "#7f8981", marginTop: 3, fontSize: 8, lineHeight: 12 },
-  permissionNote: { color: "#7a847c", paddingHorizontal: 14, paddingBottom: 12, fontSize: 8, lineHeight: 12 },
+  rowCopy: { flex: 1, minWidth: 0 }, rowTitle: { color: "#2c3b30", fontSize: 11, fontWeight: "900" }, rowHint: { color: "#7f8981", marginTop: 3, fontSize: 10, lineHeight: 12 },
+  permissionNote: { color: "#7a847c", paddingHorizontal: 14, paddingBottom: 12, fontSize: 10, lineHeight: 12 },
   systemSettings: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, marginBottom: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.93)", borderWidth: 1, borderColor: "#dfe7df" },
-  systemSettingsText: { flex: 1, color: "#4f6153", fontSize: 10, fontWeight: "800" },
+  systemSettingsText: { flex: 1, color: "#4f6153", fontSize: 11, fontWeight: "800" },
   logout: { height: 51, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: 15, backgroundColor: "#fff3f3", borderWidth: 1, borderColor: "#eccaca" },
-  logoutText: { color: "#b52e2e", fontSize: 12, fontWeight: "900" }, footer: { color: "#7f8981", marginTop: 17, textAlign: "center", fontSize: 8 },
+  logoutText: { color: "#b52e2e", fontSize: 12, fontWeight: "900" }, footer: { color: "#7f8981", marginTop: 17, textAlign: "center", fontSize: 10 },
 });

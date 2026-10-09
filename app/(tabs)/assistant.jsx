@@ -120,7 +120,7 @@ export default function Assistant() {
   return (
     <ImageBackground source={require("../../assets/images/background-bg.jpg")} style={styles.bg} resizeMode="cover">
       <SafeAreaView style={styles.safe}>
-        <GradientHeader title="SmartBRGY Assistant" subtitle="AI helper for barangay services" rightIcon="refresh" onRightPress={clearChat} />
+        <GradientHeader title="SmartBRGY Assistant" subtitle="AI helper for barangay services" onBack rightIcon="refresh" onRightPress={clearChat} />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <ScrollView
             ref={scrollRef}
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: 14, paddingBottom: 24 },
   notice: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 11, marginBottom: 14, borderRadius: 13, backgroundColor: "#fff6dc", borderWidth: 1, borderColor: "#f1dfa5" },
-  noticeText: { flex: 1, color: "#6d5410", fontSize: 10, lineHeight: 15, fontWeight: "700" },
+  noticeText: { flex: 1, color: "#6d5410", fontSize: 11, lineHeight: 15, fontWeight: "700" },
   row: { flexDirection: "row", alignItems: "flex-end", gap: 7, marginBottom: 10 },
   rowUser: { justifyContent: "flex-end" },
   avatar: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "#2e7d32" },

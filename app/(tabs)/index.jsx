@@ -17,7 +17,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 
+import GradientHeader from "../../components/GradientHeader";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { syncBadgeCount } from "../../lib/pushNotifications";
+import { GRADIENT } from "../../constants/theme";
 
 const services = [
   { title: "Announcements", subtitle: "Barangay news and alerts", icon: "megaphone", color: "#287b3b", route: "/announcement" },
@@ -111,6 +114,7 @@ export default function ResidentHome() {
 
       const notificationResult = results[1];
       setUnread(notificationResult?.count || 0);
+      syncBadgeCount(notificationResult?.count || 0);
       const announcementResult = results[2];
       setLatestAnnouncement(announcementResult?.data || null);
 
@@ -152,6 +156,15 @@ export default function ResidentHome() {
   return (
     <ImageBackground source={require("../../assets/images/background-bg.jpg")} style={styles.bg} resizeMode="cover">
       <SafeAreaView style={styles.safe}>
+        <GradientHeader
+          eyebrow="MAAYONG ADLAW"
+          title={`Hello, ${firstName}!`}
+          subtitle="Barangay Tubod, Toledo City"
+          actions={[
+            { icon: "notifications-outline", onPress: () => router.push("/notifications"), badge: unread, label: "Notifications" },
+            { icon: "person-circle-outline", onPress: () => router.push("/profile"), label: "Profile" },
+          ]}
+        />
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
@@ -164,27 +177,7 @@ export default function ResidentHome() {
               <Ionicons name="refresh" size={18} color="#a63232" />
             </TouchableOpacity>
           )}
-          <View style={styles.topbar}>
-            <TouchableOpacity style={styles.identity} onPress={() => router.push("/profile")}>
-              {user.profilePic ? <Image source={{ uri: user.profilePic }} style={styles.avatar} /> :
-                <View style={styles.avatarFallback}><Ionicons name="person" size={22} color="#2e7d32" /></View>}
-              <View style={styles.identityText}>
-                <Text style={styles.kicker}>MAAYONG ADLAW</Text>
-                <Text style={styles.greeting} numberOfLines={1}>Hello, {firstName}!</Text>
-              </View>
-            </TouchableOpacity>
-            <View style={styles.topActions}>
-              <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/settings")}>
-                <Ionicons name="settings-outline" size={21} color="#36543b" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/notifications")}>
-                <Ionicons name="notifications-outline" size={22} color="#36543b" />
-                {unread > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{unread > 9 ? "9+" : unread}</Text></View>}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <LinearGradient colors={["#1f6f32", "#339147", "#dda11c"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <LinearGradient colors={GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
             <View style={styles.heroGlow} />
             <View style={styles.heroCopy}>
               <Text style={styles.heroEyebrow}>OFFICIAL RESIDENT PORTAL</Text>
@@ -260,58 +253,58 @@ function ActivityItem({ icon, label, value, color }) {
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: "#f2f6f2" },
   safe: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 108 },
-  errorCard: { flexDirection: "row", alignItems: "center", gap: 8, padding: 11, marginBottom: 10, borderRadius: 13, backgroundColor: "#fff1f1", borderWidth: 1, borderColor: "#e8bbbb" },
-  errorText: { flex: 1, color: "#8c3030", fontSize: 9, lineHeight: 14, fontWeight: "700" },
+  content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 108 },
+  errorCard: { flexDirection: "row", alignItems: "center", gap: 8, padding: 11, marginBottom: 10, borderRadius: 16, backgroundColor: "#fff1f1", borderWidth: 1, borderColor: "#e8bbbb" },
+  errorText: { flex: 1, color: "#8c3030", fontSize: 11, lineHeight: 14, fontWeight: "700" },
   topbar: { minHeight: 57, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   identity: { flex: 1, flexDirection: "row", alignItems: "center" },
   avatar: { width: 45, height: 45, borderRadius: 15, borderWidth: 2, borderColor: "#2e7d32" },
   avatarFallback: { width: 45, height: 45, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "#e5f2e7", borderWidth: 1, borderColor: "#b9d7bd" },
   identityText: { flex: 1, marginLeft: 10 },
-  kicker: { color: "#768279", fontSize: 8, fontWeight: "900", letterSpacing: 1.1 },
+  kicker: { color: "#768279", fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
   greeting: { color: "#203d26", marginTop: 2, fontSize: 18, fontWeight: "900" },
   topActions: { flexDirection: "row", gap: 8 },
   iconButton: { position: "relative", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "rgba(255,255,255,0.94)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 2 },
   badge: { position: "absolute", right: -3, top: -3, minWidth: 18, height: 18, paddingHorizontal: 4, alignItems: "center", justifyContent: "center", borderRadius: 9, backgroundColor: "#cf3434", borderWidth: 2, borderColor: "#fff" },
-  badgeText: { color: "#fff", fontSize: 8, fontWeight: "900" },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "900" },
   hero: { minHeight: 174, overflow: "hidden", flexDirection: "row", alignItems: "center", padding: 20, marginBottom: 22, borderRadius: 23, elevation: 7, shadowColor: "#19371e", shadowOpacity: 0.2, shadowOffset: { width: 0, height: 6 }, shadowRadius: 12 },
   heroGlow: { position: "absolute", width: 170, height: 170, right: -40, top: -65, borderRadius: 85, backgroundColor: "rgba(255,255,255,0.12)" },
   heroCopy: { flex: 1, zIndex: 1 },
-  heroEyebrow: { color: "#dff3e2", fontSize: 8, fontWeight: "900", letterSpacing: 1.2 },
+  heroEyebrow: { color: "#dff3e2", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
   heroTitle: { color: "#fff", marginTop: 7, fontSize: 27, fontWeight: "900" },
   heroTitleCompact: { fontSize: 23 },
   heroLocation: { color: "#fff", marginTop: 3, fontSize: 11, fontWeight: "800" },
-  heroMessage: { maxWidth: 225, color: "#edf8ee", marginTop: 11, fontSize: 10, lineHeight: 15 },
+  heroMessage: { maxWidth: 225, color: "#edf8ee", marginTop: 11, fontSize: 11, lineHeight: 15 },
   heroLogo: { width: 84, height: 84, marginLeft: 7 },
   sectionHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
-  assistantCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 13, marginBottom: 16, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#cfe6d2", elevation: 3 },
+  assistantCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 13, marginBottom: 16, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#cfe6d2", elevation: 3 },
   assistantIcon: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 13, backgroundColor: "#2e7d32" },
   assistantCopy: { flex: 1 },
   assistantTitle: { color: "#225d29", fontSize: 13, fontWeight: "900" },
-  assistantHint: { color: "#66736a", marginTop: 3, fontSize: 9, lineHeight: 13, fontWeight: "700" },
+  assistantHint: { color: "#66736a", marginTop: 3, fontSize: 11, lineHeight: 13, fontWeight: "700" },
   sectionTitle: { color: "#213d27", fontSize: 16, fontWeight: "900" },
-  sectionHint: { color: "#7d877f", marginTop: 2, fontSize: 9 },
-  viewAll: { color: "#2e7d32", fontSize: 10, fontWeight: "900" },
+  sectionHint: { color: "#7d877f", marginTop: 2, fontSize: 11 },
+  viewAll: { color: "#2e7d32", fontSize: 11, fontWeight: "900" },
   serviceGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10, marginBottom: 23 },
   serviceCard: { position: "relative", width: "48.4%", aspectRatio: 1, padding: 14, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#e0e8e1", elevation: 3 },
   serviceIcon: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 14 },
   serviceTitle: { color: "#293a2d", marginTop: 10, paddingRight: 20, fontSize: 13, fontWeight: "900" },
-  serviceSubtitle: { color: "#818a83", marginTop: 3, paddingRight: 13, fontSize: 8, lineHeight: 12 },
+  serviceSubtitle: { color: "#818a83", marginTop: 3, paddingRight: 13, fontSize: 10, lineHeight: 12 },
   serviceArrow: { position: "absolute", right: 12, bottom: 12 },
   activityCard: { flexDirection: "row", alignItems: "stretch", paddingVertical: 15, marginTop: 9, marginBottom: 23, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.96)", borderWidth: 1, borderColor: "#e0e8e1", elevation: 3 },
   activityItem: { flex: 1, minWidth: 0, alignItems: "center", paddingHorizontal: 5 },
   activityValue: { color: "#243629", marginTop: 4, fontSize: 18, fontWeight: "900" },
-  activityLabel: { color: "#78827a", marginTop: 2, textAlign: "center", fontSize: 7, lineHeight: 10 },
+  activityLabel: { color: "#78827a", marginTop: 2, textAlign: "center", fontSize: 10, lineHeight: 10 },
   divider: { width: 1, backgroundColor: "#e5ebe6" },
   newsCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 14, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 3 },
   newsIcon: { width: 45, height: 45, alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "#2e7d32" },
   newsCopy: { flex: 1 },
-  newsType: { color: "#b57a05", fontSize: 8, fontWeight: "900", textTransform: "uppercase" },
+  newsType: { color: "#b57a05", fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
   newsTitle: { color: "#2a392e", marginTop: 3, fontSize: 12, lineHeight: 16, fontWeight: "900" },
-  newsMeta: { color: "#8a938c", marginTop: 4, fontSize: 8 },
+  newsMeta: { color: "#8a938c", marginTop: 4, fontSize: 10 },
   loader: { marginVertical: 28 },
   emptyNews: { flexDirection: "row", alignItems: "center", gap: 10, padding: 18, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.9)" },
-  emptyNewsText: { color: "#6f7d72", fontSize: 10, fontWeight: "700" },
+  emptyNewsText: { color: "#6f7d72", fontSize: 11, fontWeight: "700" },
   safetyNote: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 13, marginTop: 14, borderRadius: 14, backgroundColor: "#edf6ee", borderWidth: 1, borderColor: "#d0e3d2" },
-  safetyText: { flex: 1, color: "#536557", fontSize: 9, lineHeight: 14 },
+  safetyText: { flex: 1, color: "#536557", fontSize: 11, lineHeight: 14 },
 });

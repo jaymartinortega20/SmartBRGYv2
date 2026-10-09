@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 
+import GradientHeader from "../components/GradientHeader";
 import { supabase } from "../lib/supabase";
 
 const closed = new Set(["claimed", "resolved", "rejected", "closed", "cancelled"]);
@@ -104,11 +105,7 @@ export default function MobileAdminDashboard() {
   return (
     <ImageBackground source={require("../assets/images/background-bg.jpg")} style={styles.bg}>
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <View style={styles.shield}><Ionicons name="shield-checkmark" size={23} color="#fff" /></View>
-          <View style={styles.headerCopy}><Text style={styles.eyebrow}>SMARTBRGY ADMIN</Text><Text style={styles.headerTitle}>Operations Overview</Text></View>
-          <TouchableOpacity style={styles.signOut} onPress={signOut}><Ionicons name="log-out-outline" size={21} color="#fff" /></TouchableOpacity>
-        </View>
+        <GradientHeader eyebrow="SMARTBRGY ADMIN" title="Operations Overview" rightIcon="log-out-outline" onRightPress={signOut} />
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -154,20 +151,20 @@ function Status({ value }) {
 const styles = StyleSheet.create({
   bg: { flex: 1 }, safe: { flex: 1 }, header: { minHeight: 72, flexDirection: "row", alignItems: "center", gap: 10, padding: 13, backgroundColor: "#246f32", elevation: 5 },
   shield: { width: 43, height: 43, alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "rgba(255,255,255,0.16)" },
-  headerCopy: { flex: 1 }, eyebrow: { color: "#cde7d0", fontSize: 7, fontWeight: "900", letterSpacing: 1 }, headerTitle: { color: "#fff", marginTop: 3, fontSize: 18, fontWeight: "900" },
+  headerCopy: { flex: 1 }, eyebrow: { color: "#cde7d0", fontSize: 10, fontWeight: "900", letterSpacing: 1 }, headerTitle: { color: "#fff", marginTop: 3, fontSize: 18, fontWeight: "900" },
   signOut: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 13, backgroundColor: "rgba(255,255,255,0.14)" },
   content: { padding: 16, paddingBottom: 35 }, welcome: { flexDirection: "row", alignItems: "center", gap: 12, padding: 17, marginBottom: 14, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dce7de", elevation: 3 },
-  welcomeKicker: { color: "#2e7d32", fontSize: 7, fontWeight: "900", letterSpacing: 0.9 }, welcomeTitle: { color: "#24382a", marginTop: 5, fontSize: 18, fontWeight: "900" }, welcomeText: { color: "#778179", marginTop: 5, fontSize: 9, lineHeight: 14 },
-  activeBubble: { width: 58, height: 58, alignItems: "center", justifyContent: "center", borderRadius: 19, backgroundColor: "#eaf6ec" }, activeNumber: { color: "#2e7d32", fontSize: 20, fontWeight: "900" }, activeLabel: { color: "#528159", fontSize: 6, fontWeight: "900" },
-  error: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, marginBottom: 12, borderRadius: 13, backgroundColor: "#fff0f0", borderWidth: 1, borderColor: "#e9c8c8" }, errorText: { flex: 1, color: "#8d3333", fontSize: 9 },
+  welcomeKicker: { color: "#2e7d32", fontSize: 10, fontWeight: "900", letterSpacing: 0.9 }, welcomeTitle: { color: "#24382a", marginTop: 5, fontSize: 18, fontWeight: "900" }, welcomeText: { color: "#778179", marginTop: 5, fontSize: 11, lineHeight: 14 },
+  activeBubble: { width: 58, height: 58, alignItems: "center", justifyContent: "center", borderRadius: 19, backgroundColor: "#eaf6ec" }, activeNumber: { color: "#2e7d32", fontSize: 20, fontWeight: "900" }, activeLabel: { color: "#528159", fontSize: 10, fontWeight: "900" },
+  error: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, marginBottom: 12, borderRadius: 13, backgroundColor: "#fff0f0", borderWidth: 1, borderColor: "#e9c8c8" }, errorText: { flex: 1, color: "#8d3333", fontSize: 11 },
   loader: { marginTop: 70 }, sectionTitle: { color: "#263d2b", marginLeft: 2, marginBottom: 9, fontSize: 14, fontWeight: "900" }, sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 }, stat: { width: "48.3%", minHeight: 120, padding: 14, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#e0e8e1", elevation: 2 },
-  statIcon: { width: 39, height: 39, alignItems: "center", justifyContent: "center", borderRadius: 12 }, statValue: { color: "#26372b", marginTop: 8, fontSize: 21, fontWeight: "900" }, statLabel: { color: "#7c867e", marginTop: 2, fontSize: 8, fontWeight: "700" },
+  statIcon: { width: 39, height: 39, alignItems: "center", justifyContent: "center", borderRadius: 12 }, statValue: { color: "#26372b", marginTop: 8, fontSize: 21, fontWeight: "900" }, statLabel: { color: "#7c867e", marginTop: 2, fontSize: 10, fontWeight: "700" },
   list: { overflow: "hidden", borderRadius: 18, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 2 },
   row: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderBottomWidth: 1, borderBottomColor: "#edf1ed" }, rowIcon: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 12 }, rowCopy: { flex: 1, minWidth: 0 },
-  rowKind: { color: "#768178", fontSize: 7, fontWeight: "900", textTransform: "uppercase" }, rowTitle: { color: "#2f3d33", marginTop: 2, fontSize: 10, fontWeight: "900" }, rowDate: { color: "#929a94", marginTop: 3, fontSize: 7 },
-  status: { maxWidth: 86, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 20, backgroundColor: "#fff1c9" }, statusText: { color: "#73530f", fontSize: 7, fontWeight: "900", textTransform: "capitalize" },
-  empty: { alignItems: "center", padding: 26 }, emptyText: { color: "#708074", marginTop: 7, fontSize: 9 },
+  rowKind: { color: "#768178", fontSize: 10, fontWeight: "900", textTransform: "uppercase" }, rowTitle: { color: "#2f3d33", marginTop: 2, fontSize: 11, fontWeight: "900" }, rowDate: { color: "#929a94", marginTop: 3, fontSize: 10 },
+  status: { maxWidth: 86, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 20, backgroundColor: "#fff1c9" }, statusText: { color: "#73530f", fontSize: 10, fontWeight: "900", textTransform: "capitalize" },
+  empty: { alignItems: "center", padding: 26 }, emptyText: { color: "#708074", marginTop: 7, fontSize: 11 },
   desktopNote: { flexDirection: "row", alignItems: "flex-start", gap: 11, padding: 15, marginTop: 14, borderRadius: 16, backgroundColor: "#eaf6ec", borderWidth: 1, borderColor: "#cde2d0" },
-  desktopTitle: { color: "#275e2e", fontSize: 11, fontWeight: "900" }, desktopText: { color: "#637066", marginTop: 4, fontSize: 8, lineHeight: 13 },
+  desktopTitle: { color: "#275e2e", fontSize: 11, fontWeight: "900" }, desktopText: { color: "#637066", marginTop: 4, fontSize: 10, lineHeight: 13 },
 });
