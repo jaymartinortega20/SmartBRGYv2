@@ -1,16 +1,30 @@
 # SmartBRGY push delivery
 
-Deploy this function without JWT verification because the database webhook authenticates with a private header:
+Every new row in `public.notifications` is sent to residents' phones by this function.
+Since `migration_011_notifications_and_push.sql`, the database calls it automatically
+(through `pg_net`), so no manual Database Webhook is needed.
+
+## One-time setup
+
+1. Deploy:
 
 ```bash
 npx supabase functions deploy send-push --no-verify-jwt
-npx supabase secrets set PUSH_WEBHOOK_SECRET=replace-with-a-long-random-secret
 ```
 
-In Supabase Dashboard, create a Database Webhook for **INSERT** on `public.notifications`:
+2. Choose a long random secret and save it in **both** places (same value):
 
-- URL: `https://<project-ref>.supabase.co/functions/v1/send-push`
-- Method: `POST`
-- Header: `x-smartbrgy-webhook-secret: <the same secret>`
+```bash
+npx supabase secrets set PUSH_WEBHOOK_SECRET=your-long-random-secret
+```
 
-Then run `eas init` once in the mobile project so the generated EAS project ID is written to the Expo configuration. Push notifications require a physical device and a development/preview/production build.
+```sql
+-- Supabase SQL Editor
+select vault.create_secret('your-long-random-secret', 'push_webhook_secret');
+```
+
+3. Android needs the Firebase (FCM V1) service account key uploaded to Expo once:
+   `eas credentials` → Android → production/preview → Google Service Account →
+   "Upload a Google Service Account Key for FCM V1".
+
+Push only reaches installed EAS builds on physical phones (not Expo Go).

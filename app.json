@@ -12,15 +12,15 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "android": {
-  "adaptiveIcon": {
-    "foregroundImage": "./assets/images/SmartBRGY.png",
-    "backgroundColor": "#ffffff"
-  },
-  "package": "com.jaymartinortega.smartbrgyv2",
-  "googleServicesFile": "./google-services.json",
-  "softwareKeyboardLayoutMode": "resize",
-  "edgeToEdgeEnabled": true
-},
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/SmartBRGY.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.jaymartinortega.smartbrgyv2",
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize",
+      "edgeToEdgeEnabled": true
+    },
     "androidStatusBar": {
       "barStyle": "dark-content",
       "translucent": false,
@@ -40,7 +40,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/SmartBRGY.png",
+          "icon": "./assets/images/notification-icon.png",
           "color": "#2e7d32",
           "defaultChannel": "smartbrgy-updates"
         }
@@ -65,4 +65,4 @@
       }
     }
   }
-} 
+}
