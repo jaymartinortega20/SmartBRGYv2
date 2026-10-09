@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "938336412416",
+    "project_id": "smartbrgyv2",
+    "storage_bucket": "smartbrgyv2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:938336412416:android:1dcd09ec3ac10c94d9c9e5",
+        "android_client_info": {
+          "package_name": "com.jaymartinortega.smartbrgyv2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_GwIdYgKdaDbnU2hBD37ZdKGzTBdPPNY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

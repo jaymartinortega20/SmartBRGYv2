@@ -3,24 +3,28 @@
     "name": "SmartBRGY V2",
     "slug": "smartbrgy-v2",
     "version": "2.0.0",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "orientation": "portrait",
     "icon": "./assets/images/SmartBRGY.png",
     "scheme": "smartbrgyv2",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffae00"
-      },
-      "package": "com.jaymartinortega.smartbrgyv2",
-      "softwareKeyboardLayoutMode": "resize",
-      "edgeToEdgeEnabled": true
-    },
+  "adaptiveIcon": {
+    "foregroundImage": "./assets/images/SmartBRGY.png",
+    "backgroundColor": "#ffffff"
+  },
+  "package": "com.jaymartinortega.smartbrgyv2",
+  "googleServicesFile": "./google-services.json",
+  "softwareKeyboardLayoutMode": "resize",
+  "edgeToEdgeEnabled": true
+},
     "androidStatusBar": {
       "barStyle": "dark-content",
-      "translucent": false
+      "translucent": false,
+      "backgroundColor": "#ffffff"
     },
     "androidNavigationBar": {
       "backgroundColor": "#ffffff",
@@ -44,15 +48,21 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 300,
+          "image": "./assets/images/SmartBRGY.png",
+          "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#ffae00"
+          "backgroundColor": "#ffffff"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fcd83047-ebcc-4782-b189-99f1bc4c8ff2"
+      }
     }
   }
-}
+} 
