@@ -94,6 +94,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="notification-details" options={{ href: null }} />
       <Tabs.Screen name="report-summary" options={{ href: null }} />
+      <Tabs.Screen name="assistant" options={{ href: null }} />
     </Tabs>
   );
 }

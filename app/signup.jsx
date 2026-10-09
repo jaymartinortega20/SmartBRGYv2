@@ -16,13 +16,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { openNativePicker } from "../lib/datePicker";
 
 const BARANGAY_ADDRESS = "Barangay Tubod, Toledo City";
 const AREAS = ["Sitio Ibabaw", "Drilling", "Bulok-bulok", "Centro", "Gawad Kalinga", "Lawm Tabay", "Bakhaw", "Cajocson"];
@@ -40,7 +40,6 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showDate, setShowDate] = useState(false);
   const [showPurok, setShowPurok] = useState(false);
   const [idFront, setIdFront] = useState(null);
   const [idBack, setIdBack] = useState(null);
@@ -155,7 +154,7 @@ export default function Signup() {
             <Section title="Resident information" subtitle="Use the same information shown on your valid ID.">
               <Field label="Full name *" icon="person-outline"><TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="First name, middle name, last name" placeholderTextColor="#929a93" autoCapitalize="words" /></Field>
               <Text style={styles.fieldLabel}>Birthdate *</Text>
-              <TouchableOpacity style={styles.select} onPress={() => setShowDate(true)}><Ionicons name="calendar-outline" size={20} color="#2e7d32" /><Text style={[styles.selectText, !birthdate && styles.placeholder]}>{birthdate ? displayDate(birthdate) : "Select birthdate"}</Text><Ionicons name="chevron-down" size={19} color="#7b867d" /></TouchableOpacity>
+              <TouchableOpacity style={styles.select} onPress={() => openNativePicker({ value: birthdate || new Date(2000, 0, 1), mode: "date", minimumDate: new Date(1900, 0, 1), maximumDate: new Date(), onConfirm: setBirthdate })}><Ionicons name="calendar-outline" size={20} color="#2e7d32" /><Text style={[styles.selectText, !birthdate && styles.placeholder]}>{birthdate ? displayDate(birthdate) : "Select birthdate"}</Text><Ionicons name="chevron-down" size={19} color="#7b867d" /></TouchableOpacity>
               <View style={styles.fixedAddress}><Ionicons name="location" size={21} color="#2e7d32" /><View><Text style={styles.fixedLabel}>BARANGAY ADDRESS</Text><Text style={styles.fixedValue}>{BARANGAY_ADDRESS}</Text></View></View>
               <Text style={styles.fieldLabel}>Purok / Sitio *</Text>
               <TouchableOpacity style={styles.select} onPress={() => setShowPurok(true)}><Ionicons name="map-outline" size={20} color="#2e7d32" /><Text style={[styles.selectText, !purok && styles.placeholder]}>{purok || "Select Purok or Sitio"}</Text><Ionicons name="chevron-down" size={19} color="#7b867d" /></TouchableOpacity>
@@ -190,7 +189,6 @@ export default function Signup() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-      <DatePicker visible={showDate} value={birthdate || new Date(2000, 0, 1)} onClose={() => setShowDate(false)} onConfirm={setBirthdate} />
       <PurokPicker visible={showPurok} value={purok} onClose={() => setShowPurok(false)} onConfirm={setPurok} />
     </ImageBackground>
   );
@@ -201,11 +199,6 @@ function Field({ label, icon, children }) { return <View><Text style={styles.fie
 function PasswordField({ label, value, onChangeText, visible, onToggle }) { return <View><Text style={styles.fieldLabel}>{label}</Text><View style={styles.inputWrap}><Ionicons name="lock-closed-outline" size={19} color="#2e7d32" /><TextInput style={styles.input} value={value} onChangeText={onChangeText} placeholder="Enter password" placeholderTextColor="#929a93" secureTextEntry={!visible} autoCapitalize="none" /><TouchableOpacity onPress={onToggle}><Ionicons name={visible ? "eye-off-outline" : "eye-outline"} size={20} color="#6f7b72" /></TouchableOpacity></View></View>; }
 function IdCard({ label, asset, onPress, onRemove }) { return <View style={styles.idColumn}><Text style={styles.fieldLabel}>{label}</Text><TouchableOpacity style={styles.idCard} onPress={onPress}>{asset ? <><Image source={{ uri: asset.uri }} style={styles.idImage} /><Pressable style={styles.removeId} onPress={onRemove}><Ionicons name="close" size={17} color="#fff" /></Pressable></> : <><Ionicons name="card-outline" size={27} color="#2e7d32" /><Text style={styles.idTitle}>Choose photo</Text><Text style={styles.idHint}>JPG, PNG or WEBP</Text></>}</TouchableOpacity></View>; }
 
-function DatePicker({ visible, value, onClose, onConfirm }) {
-  const [draft, setDraft] = useState(value);
-  useEffect(() => { if (visible) setDraft(value); }, [value, visible]);
-  return <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}><View style={styles.overlay}><View style={styles.modalCard}><View style={styles.modalHead}><View><Text style={styles.modalKicker}>RESIDENT INFORMATION</Text><Text style={styles.modalTitle}>Select birthdate</Text></View><TouchableOpacity style={styles.modalClose} onPress={onClose}><Ionicons name="close" size={22} color="#627066" /></TouchableOpacity></View><View style={styles.dateBody}><DateTimePicker value={draft} mode="date" display="spinner" maximumDate={new Date()} minimumDate={new Date(1900, 0, 1)} themeVariant="light" onChange={(_, selected) => selected && setDraft(selected)} /></View><ModalActions onClose={onClose} onConfirm={() => { onConfirm(draft); onClose(); }} /></View></View></Modal>;
-}
 function PurokPicker({ visible, value, onClose, onConfirm }) {
   const [draft, setDraft] = useState(value);
   useEffect(() => { if (visible) setDraft(value); }, [value, visible]);

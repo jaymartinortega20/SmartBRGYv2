@@ -11,6 +11,7 @@ const CATEGORIES = ["Garbage Collection", "Drainage/Flooding", "Streetlight", "R
 const AREAS = ["Sitio Ibabaw", "Drilling", "Bulok-bulok", "Centro", "Gawad Kalinga", "Lawm Tabay", "Bakhaw", "Cajocson"];
 const CLOSED_STATUSES = ["resolved", "rejected", "closed"];
 const MESSAGE_PAGE_SIZE = 50;
+const firstParam = (value) => (Array.isArray(value) ? value[0] : value) || "";
 
 const cleanStatus = (value) => String(value || "open").replaceAll("_", " ");
 const validDate = (value) => value && !Number.isNaN(new Date(value).getTime());
@@ -19,8 +20,9 @@ const displayTime = (value) => validDate(value) ? new Date(value).toLocaleTimeSt
 
 export default function Feedback() {
   const router = useRouter();
-  const { ticketId } = useLocalSearchParams();
+  const { ticketId, prefillCategory, prefillDetails, prefillAt } = useLocalSearchParams();
   const ticketParam = Array.isArray(ticketId) ? ticketId[0] : ticketId;
+  const handledPrefill = useRef("");
   const scrollRef = useRef(null);
   const lastAutoOpenedTicket = useRef("");
   const messageRequest = useRef(0);
@@ -117,6 +119,21 @@ export default function Feedback() {
     return () => { supabase.removeChannel(channel); };
   }, [active?.id, loadMessages, loadTickets]);
 
+  // A hand-off from the SmartBRGY Assistant starts a new concern with the
+  // category chosen and the details ready to review at the details step.
+  useEffect(() => {
+    const stamp = firstParam(prefillAt);
+    if (!stamp || handledPrefill.current === stamp) return;
+    handledPrefill.current = stamp;
+    const category = firstParam(prefillCategory);
+    const known = CATEGORIES.includes(category);
+    setActive(null);
+    setMessages([]);
+    setComposer("");
+    setWizard({ stage: known ? "area" : "category", category: known ? category : "", area: "", landmark: "", details: "", prefillDetails: firstParam(prefillDetails).slice(0, 2000) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillAt]);
+
   function startConcern() {
     setActive(null);
     setWizard({ stage: "category", category: "", area: "", landmark: "", details: "" });
@@ -128,9 +145,9 @@ export default function Feedback() {
     setWizard(null);
     setMessages([]);
     setComposer("");
-    if (ticketParam) router.replace("/feedback");
+    if (ticketParam || firstParam(prefillAt)) router.replace("/feedback");
     else loadTickets();
-  }, [loadTickets, router, ticketParam]);
+  }, [loadTickets, router, ticketParam, prefillAt]);
 
   const handleBack = useCallback(() => {
     if (active || !wizard || wizard.stage === "category") returnToTicketList();
@@ -159,7 +176,7 @@ export default function Feedback() {
     if (wizard.stage === "details" && (value.length < 2 || value.length > 2000)) return Alert.alert("Check details", "Enter 2 to 2,000 characters.");
     if (wizard.stage === "landmark") setWizard((current) => ({ ...current, landmark: value, stage: "details" }));
     if (wizard.stage === "details") setWizard((current) => ({ ...current, details: value, stage: "review" }));
-    setComposer("");
+    setComposer(wizard.stage === "landmark" && wizard.prefillDetails ? wizard.prefillDetails : "");
   }
 
   async function createTicket() {
@@ -171,7 +188,7 @@ export default function Feedback() {
       const { data, error } = await supabase.rpc("create_helpdesk_ticket", { category_input: wizard.category, area_input: wizard.area, landmark_input: wizard.landmark.trim(), details_input: wizard.details.trim() });
       if (error) throw error;
       const ticket = Array.isArray(data) ? data[0] : data;
-      if (!ticket?.id) throw new Error("The Help Desk did not return the new ticket. Run fix_helpdesk_atomic.sql in Supabase.");
+      if (!ticket?.id) throw new Error("The Help Desk did not return the new ticket. The SmartBRGY database needs an update (supabase/migration_009_fixes_and_ai.sql).");
       setWizard(null);
       setActive(ticket);
       setMessages([]);
@@ -206,7 +223,7 @@ export default function Feedback() {
   if (loading) return <ImageBackground source={require("../../assets/images/background-bg.jpg")} style={styles.bg}><SafeAreaView style={styles.safe}><GradientHeader title="Barangay Help Desk" /><ActivityIndicator style={{ marginTop: 70 }} size="large" color="#2e7d32" /></SafeAreaView></ImageBackground>;
 
   return <ImageBackground source={require("../../assets/images/background-bg.jpg")} style={styles.bg}><SafeAreaView style={styles.safe}><GradientHeader title="Barangay Help Desk" />
-    {!active && !wizard ? <TicketList tickets={tickets} onOpen={setActive} onNew={startConcern} refreshing={refreshing} onRefresh={() => loadTickets(true)} error={pageError} /> :
+    {!active && !wizard ? <TicketList tickets={tickets} onOpen={setActive} onNew={startConcern} onAsk={() => router.navigate("/assistant")} refreshing={refreshing} onRefresh={() => loadTickets(true)} error={pageError} /> :
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={0}>
         <View style={styles.chatHeader}><TouchableOpacity style={styles.back} onPress={handleBack}><Ionicons name="arrow-back" size={20} color="#2e7d32" /></TouchableOpacity><View style={styles.adminAvatar}><Ionicons name="headset" size={21} color="#fff" /></View><View style={styles.headerCopy}><Text style={styles.headerTitle}>Barangay Tubod Help Desk</Text><Text style={styles.headerSubtitle} numberOfLines={1}>{active ? `${active.ticket_number} · ${cleanStatus(active.status)}` : "Guided concern assistant"}</Text></View></View>
         {!!pageError && <View style={styles.inlineError}><Ionicons name="alert-circle" size={16} color="#a43232" /><Text style={styles.inlineErrorText}>{pageError}</Text></View>}
@@ -218,8 +235,8 @@ export default function Feedback() {
   </SafeAreaView></ImageBackground>;
 }
 
-function TicketList({ tickets, onOpen, onNew, refreshing, onRefresh, error }) {
-  return <ScrollView contentContainerStyle={styles.listContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#2e7d32"]} />}><View style={styles.welcome}><View style={styles.welcomeIcon}><Ionicons name="chatbubbles" size={27} color="#fff" /></View><View style={{ flex: 1 }}><Text style={styles.welcomeTitle}>Barangay Tubod Help Desk</Text><Text style={styles.welcomeText}>Send important barangay service concerns and continue the conversation with an authorized official.</Text></View></View>{!!error && <TouchableOpacity style={styles.errorCard} onPress={onRefresh}><Ionicons name="refresh" size={18} color="#a43232" /><Text style={styles.errorCardText}>{error} Tap to retry.</Text></TouchableOpacity>}<TouchableOpacity style={styles.newButton} onPress={onNew}><Ionicons name="add-circle" size={21} color="#fff" /><Text style={styles.newButtonText}>Start New Concern</Text></TouchableOpacity><Text style={styles.listTitle}>Your conversations</Text>{tickets.map((ticket) => <TouchableOpacity key={ticket.id} style={styles.ticketRow} onPress={() => onOpen(ticket)}><View style={styles.ticketIcon}><Ionicons name="chatbox-ellipses-outline" size={22} color="#2e7d32" /></View><View style={styles.ticketCopy}><Text style={styles.ticketCategory}>{ticket.category || ticket.subject}</Text><Text style={styles.ticketNumber}>{ticket.ticket_number || "Concern ticket"}</Text><Text style={styles.ticketPreview} numberOfLines={1}>{ticket.latest_message || ticket.details}</Text></View><View style={styles.ticketSide}>{ticket.unread_count > 0 && <View style={styles.unread}><Text style={styles.unreadText}>{ticket.unread_count > 99 ? "99+" : ticket.unread_count}</Text></View>}<Status value={ticket.status} /><Text style={styles.ticketDate}>{displayDate(ticket.updated_at || ticket.created_at)}</Text></View></TouchableOpacity>)}{!tickets.length && !error && <View style={styles.empty}><Ionicons name="file-tray-outline" size={33} color="#2e7d32" /><Text style={styles.emptyTitle}>No conversations yet</Text><Text style={styles.emptyText}>Start a concern to contact the Barangay Tubod Help Desk.</Text></View>}</ScrollView>;
+function TicketList({ tickets, onOpen, onNew, onAsk, refreshing, onRefresh, error }) {
+  return <ScrollView contentContainerStyle={styles.listContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#2e7d32"]} />}><View style={styles.welcome}><View style={styles.welcomeIcon}><Ionicons name="chatbubbles" size={27} color="#fff" /></View><View style={{ flex: 1 }}><Text style={styles.welcomeTitle}>Barangay Tubod Help Desk</Text><Text style={styles.welcomeText}>Send important barangay service concerns and continue the conversation with an authorized official.</Text></View></View>{!!error && <TouchableOpacity style={styles.errorCard} onPress={onRefresh}><Ionicons name="refresh" size={18} color="#a43232" /><Text style={styles.errorCardText}>{error} Tap to retry.</Text></TouchableOpacity>}<TouchableOpacity style={styles.newButton} onPress={onNew}><Ionicons name="add-circle" size={21} color="#fff" /><Text style={styles.newButtonText}>Start New Concern</Text></TouchableOpacity><TouchableOpacity style={styles.askButton} onPress={onAsk}><Ionicons name="sparkles" size={18} color="#2e7d32" /><Text style={styles.askButtonText}>Quick question? Ask the SmartBRGY Assistant</Text><Ionicons name="chevron-forward" size={17} color="#2e7d32" /></TouchableOpacity><Text style={styles.listTitle}>Your conversations</Text>{tickets.map((ticket) => <TouchableOpacity key={ticket.id} style={styles.ticketRow} onPress={() => onOpen(ticket)}><View style={styles.ticketIcon}><Ionicons name="chatbox-ellipses-outline" size={22} color="#2e7d32" /></View><View style={styles.ticketCopy}><Text style={styles.ticketCategory}>{ticket.category || ticket.subject}</Text><Text style={styles.ticketNumber}>{ticket.ticket_number || "Concern ticket"}</Text><Text style={styles.ticketPreview} numberOfLines={1}>{ticket.latest_message || ticket.details}</Text></View><View style={styles.ticketSide}>{ticket.unread_count > 0 && <View style={styles.unread}><Text style={styles.unreadText}>{ticket.unread_count > 99 ? "99+" : ticket.unread_count}</Text></View>}<Status value={ticket.status} /><Text style={styles.ticketDate}>{displayDate(ticket.updated_at || ticket.created_at)}</Text></View></TouchableOpacity>)}{!tickets.length && !error && <View style={styles.empty}><Ionicons name="file-tray-outline" size={33} color="#2e7d32" /><Text style={styles.emptyTitle}>No conversations yet</Text><Text style={styles.emptyText}>Start a concern to contact the Barangay Tubod Help Desk.</Text></View>}</ScrollView>;
 }
 
 function Wizard({ profile, wizard, chooseCategory, chooseArea, onConfirm, sending }) {
@@ -246,6 +263,8 @@ function Status({ value }) { return <View style={styles.status}><Text style={sty
 function Summary({ label, value }) { return <View style={styles.summaryRow}><Text style={styles.summaryLabel}>{label}</Text><Text style={styles.summaryValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
+  askButton: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 13, paddingVertical: 12, marginTop: 10, marginBottom: 6, borderRadius: 14, backgroundColor: "#eaf6ec", borderWidth: 1, borderColor: "#cfe6d2" },
+  askButtonText: { flex: 1, color: "#2e7d32", fontSize: 12, fontWeight: "900" },
   bg: { flex: 1 }, safe: { flex: 1 }, flex: { flex: 1 }, listContent: { padding: 16, paddingBottom: 105 }, welcome: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dce6dd", elevation: 3 }, welcomeIcon: { width: 52, height: 52, alignItems: "center", justifyContent: "center", borderRadius: 16, backgroundColor: "#2e7d32" }, welcomeTitle: { color: "#225d29", fontSize: 17, fontWeight: "900" }, welcomeText: { color: "#727c74", marginTop: 4, fontSize: 10, lineHeight: 15 }, newButton: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, marginVertical: 13, borderRadius: 14, backgroundColor: "#2e7d32", elevation: 3 }, newButtonText: { color: "#fff", fontWeight: "900" }, listTitle: { color: "#225d29", margin: 4, fontSize: 14, fontWeight: "900" }, ticketRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 13, marginTop: 9, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 2 }, ticketIcon: { width: 43, height: 43, alignItems: "center", justifyContent: "center", borderRadius: 13, backgroundColor: "#eaf6ec" }, ticketCopy: { flex: 1, minWidth: 0 }, ticketCategory: { color: "#2d3a30", fontSize: 12, fontWeight: "900" }, ticketNumber: { color: "#2e7d32", marginTop: 2, fontSize: 9, fontWeight: "800" }, ticketPreview: { color: "#7b847d", marginTop: 4, fontSize: 9 }, ticketSide: { alignItems: "flex-end", gap: 6 }, ticketDate: { color: "#909891", fontSize: 8 }, status: { paddingHorizontal: 7, paddingVertical: 4, borderRadius: 20, backgroundColor: "#fff1c9" }, statusText: { color: "#73530f", fontSize: 7, fontWeight: "900", textTransform: "capitalize" }, unread: { minWidth: 20, height: 20, paddingHorizontal: 5, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: "#d32f2f" }, unreadText: { color: "#fff", fontSize: 8, fontWeight: "900" }, empty: { alignItems: "center", padding: 32, marginTop: 10, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.9)" }, emptyTitle: { marginTop: 9, fontWeight: "900" }, emptyText: { color: "#78817a", marginTop: 5, textAlign: "center", fontSize: 9 }, errorCard: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, marginTop: 12, borderRadius: 12, backgroundColor: "#fff1f1", borderWidth: 1, borderColor: "#e9b9b9" }, errorCardText: { flex: 1, color: "#8d2e2e", fontSize: 10, lineHeight: 15 },
   chatHeader: { height: 67, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 13, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#dfe7e0" }, back: { width: 35, height: 35, alignItems: "center", justifyContent: "center" }, adminAvatar: { width: 41, height: 41, alignItems: "center", justifyContent: "center", borderRadius: 13, backgroundColor: "#2e7d32" }, headerCopy: { flex: 1, minWidth: 0 }, headerTitle: { color: "#26352a", fontSize: 13, fontWeight: "900" }, headerSubtitle: { color: "#7a847c", marginTop: 2, fontSize: 8, textTransform: "capitalize" }, chatContent: { padding: 14, paddingBottom: 20 }, inlineError: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 13, paddingVertical: 8, backgroundColor: "#fff1f1" }, inlineErrorText: { flex: 1, color: "#8d2e2e", fontSize: 9 },
   systemRow: { flexDirection: "row", alignItems: "flex-end", gap: 7, marginBottom: 11, maxWidth: "88%" }, botAvatar: { width: 30, height: 30, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: "#2e7d32" }, systemBubble: { flexShrink: 1, padding: 11, borderRadius: 14, borderBottomLeftRadius: 4, backgroundColor: "#fff", borderWidth: 1, borderColor: "#dfe7e0" }, systemText: { color: "#435047", fontSize: 11, lineHeight: 17 }, adminSmall: { width: 30, height: 30, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: "#f9a825" }, adminLetter: { color: "#fff", fontWeight: "900" }, adminMessageCopy: { flexShrink: 1, minWidth: 0 }, senderLabel: { color: "#637067", marginBottom: 3, fontSize: 8, fontWeight: "900" }, adminBubble: { flexShrink: 1, padding: 11, borderRadius: 14, borderBottomLeftRadius: 4, backgroundColor: "#fff9e8", borderWidth: 1, borderColor: "#efd88d" }, adminText: { color: "#4b432d", fontSize: 11, lineHeight: 17 }, userRow: { alignItems: "flex-end", marginBottom: 11, marginLeft: "12%" }, userBubble: { maxWidth: "100%", padding: 11, borderRadius: 14, borderBottomRightRadius: 4, backgroundColor: "#2e7d32" }, userText: { color: "#fff", fontSize: 11, lineHeight: 17 }, messageTime: { color: "#929991", marginTop: 3, fontSize: 7 }, quickReplies: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginLeft: 37, marginBottom: 12 }, quickReply: { paddingHorizontal: 11, paddingVertical: 8, borderRadius: 18, backgroundColor: "#fff", borderWidth: 1, borderColor: "#79ad80" }, quickText: { color: "#2e7d32", fontSize: 9, fontWeight: "800" }, olderButton: { alignSelf: "center", paddingHorizontal: 13, paddingVertical: 8, marginBottom: 12, borderRadius: 14, backgroundColor: "#eaf6ec" }, olderText: { color: "#2e7d32", fontSize: 9, fontWeight: "800" },

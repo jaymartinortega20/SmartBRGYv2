@@ -5,7 +5,6 @@ import {
   Image,
   ImageBackground,
   KeyboardAvoidingView,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,13 +14,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
 import GradientHeader from "../../components/GradientHeader";
-import { supabase } from "../../lib/supabase";
+import { getCurrentUserId, supabase } from "../../lib/supabase";
+import { openNativePicker } from "../../lib/datePicker";
 
 const ADDRESS = "Barangay Tubod, Toledo City";
 const AREAS = ["Sitio Ibabaw", "Drilling", "Bulok-bulok", "Centro", "Gawad Kalinga", "Lawm Tabay", "Bakhaw", "Cajocson"];
@@ -42,7 +41,6 @@ export default function EditProfile() {
   const [profilePic, setProfilePic] = useState("");
   const [profileImagePath, setProfileImagePath] = useState("");
   const [newAsset, setNewAsset] = useState(null);
-  const [showDate, setShowDate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -51,10 +49,13 @@ export default function EditProfile() {
   async function load() {
     try {
       const stored = await AsyncStorage.getItem("currentUser");
-      const parsed = stored ? JSON.parse(stored) : {};
-      setStoredUser(parsed);
-      setUserId(parsed.id || "");
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", parsed.id).single();
+      let parsed = {};
+      try { parsed = stored ? JSON.parse(stored) : {}; } catch { parsed = {}; }
+      const currentId = await getCurrentUserId();
+      if (!currentId) throw new Error("Your session has expired. Please log in again.");
+      setStoredUser({ ...parsed, id: currentId });
+      setUserId(currentId);
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", currentId).single();
       if (error) throw error;
       setName(data.full_name || "");
       setEmail(data.email || parsed.email || "");
@@ -92,11 +93,17 @@ export default function EditProfile() {
     try {
       let savedPath = profileImagePath || null;
       if (newAsset) {
+        const mimeType = String(newAsset.mimeType || "image/jpeg").toLowerCase();
+        const imageType = mimeType === "image/png" ? { extension: "png", contentType: "image/png" }
+          : mimeType === "image/webp" ? { extension: "webp", contentType: "image/webp" }
+          : mimeType === "image/jpeg" || mimeType === "image/jpg" ? { extension: "jpg", contentType: "image/jpeg" }
+          : null;
+        if (!imageType) throw new Error("Use a JPG, PNG, or WebP photo for your profile picture.");
         const response = await fetch(newAsset.uri);
         const fileData = await response.arrayBuffer();
-        const extension = newAsset.fileName?.split(".").pop()?.toLowerCase() || "jpg";
-        savedPath = `${userId}/profile-${Date.now()}.${extension}`;
-        const { error: uploadError } = await supabase.storage.from("profile-images").upload(savedPath, fileData, { contentType: newAsset.mimeType || "image/jpeg" });
+        if (fileData.byteLength > 5 * 1024 * 1024) throw new Error("The profile photo must be 5 MB or smaller.");
+        savedPath = `${userId}/profile-${Date.now()}.${imageType.extension}`;
+        const { error: uploadError } = await supabase.storage.from("profile-images").upload(savedPath, fileData, { contentType: imageType.contentType });
         if (uploadError) throw uploadError;
       }
       const updates = {
@@ -110,6 +117,10 @@ export default function EditProfile() {
       };
       const { error } = await supabase.from("profiles").update(updates).eq("id", userId);
       if (error) throw error;
+      if (newAsset && profileImagePath && profileImagePath !== savedPath && !profileImagePath.startsWith("http")) {
+        // Remove the replaced photo so old pictures don't pile up in storage.
+        supabase.storage.from("profile-images").remove([profileImagePath]).catch(() => undefined);
+      }
       await AsyncStorage.setItem("currentUser", JSON.stringify({
         ...storedUser,
         name: updates.full_name,
@@ -149,7 +160,7 @@ export default function EditProfile() {
                 <Label text="Full name *" /><Input icon="person-outline" value={name} onChangeText={setName} placeholder="Complete resident name" />
                 <Label text="Email address" /><View style={[styles.inputWrap, styles.readOnly]}><Ionicons name="mail-outline" size={19} color="#78847a" /><Text style={styles.readOnlyText}>{email}</Text><Ionicons name="lock-closed" size={15} color="#909a92" /></View>
                 <Label text="Phone number *" /><Input icon="call-outline" value={phone} onChangeText={setPhone} placeholder="09XXXXXXXXX" keyboardType="phone-pad" />
-                <Label text="Birthdate *" /><TouchableOpacity style={styles.inputWrap} onPress={() => setShowDate(true)}><Ionicons name="calendar-outline" size={19} color="#2e7d32" /><Text style={styles.selectValue}>{displayDate(birthdate)}</Text><Ionicons name="chevron-down" size={18} color="#7d887f" /></TouchableOpacity>
+                <Label text="Birthdate *" /><TouchableOpacity style={styles.inputWrap} onPress={() => openNativePicker({ value: birthdate, mode: "date", minimumDate: new Date(1900, 0, 1), maximumDate: new Date(), onConfirm: setBirthdate })}><Ionicons name="calendar-outline" size={19} color="#2e7d32" /><Text style={styles.selectValue}>{displayDate(birthdate)}</Text><Ionicons name="chevron-down" size={18} color="#7d887f" /></TouchableOpacity>
                 <Label text="Barangay address" /><View style={styles.address}><Ionicons name="location" size={20} color="#2e7d32" /><View><Text style={styles.addressLabel}>FIXED SERVICE AREA</Text><Text style={styles.addressValue}>{ADDRESS}</Text></View></View>
                 <Label text="Purok / Sitio *" /><View style={styles.chips}>{AREAS.map((area) => <TouchableOpacity key={area} style={[styles.chip, purok === area && styles.chipActive]} onPress={() => setPurok(area)}><Text style={[styles.chipText, purok === area && styles.chipTextActive]}>{area}</Text></TouchableOpacity>)}</View>
               </View>
@@ -158,18 +169,12 @@ export default function EditProfile() {
             </ScrollView>
           </KeyboardAvoidingView>}
       </SafeAreaView>
-      <DatePicker visible={showDate} value={birthdate} onClose={() => setShowDate(false)} onConfirm={setBirthdate} />
     </ImageBackground>
   );
 }
 
 function Label({ text }) { return <Text style={styles.label}>{text}</Text>; }
 function Input({ icon, ...props }) { return <View style={styles.inputWrap}><Ionicons name={icon} size={19} color="#2e7d32" /><TextInput {...props} style={styles.input} placeholderTextColor="#929a93" /></View>; }
-function DatePicker({ visible, value, onClose, onConfirm }) {
-  const [draft, setDraft] = useState(value);
-  useEffect(() => { if (visible) setDraft(value); }, [value, visible]);
-  return <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}><View style={styles.overlay}><View style={styles.picker}><View style={styles.pickerHead}><View><Text style={styles.pickerKicker}>RESIDENT INFORMATION</Text><Text style={styles.pickerTitle}>Select birthdate</Text></View><TouchableOpacity style={styles.pickerClose} onPress={onClose}><Ionicons name="close" size={22} color="#657068" /></TouchableOpacity></View><View style={styles.pickerBody}><DateTimePicker value={draft} mode="date" display="spinner" minimumDate={new Date(1900, 0, 1)} maximumDate={new Date()} themeVariant="light" onChange={(_, selected) => selected && setDraft(selected)} /></View><View style={styles.pickerActions}><TouchableOpacity style={styles.cancel} onPress={onClose}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.confirm} onPress={() => { onConfirm(draft); onClose(); }}><Ionicons name="checkmark" size={18} color="#fff" /><Text style={styles.confirmText}>Confirm</Text></TouchableOpacity></View></View></View></Modal>;
-}
 
 const styles = StyleSheet.create({
   bg: { flex: 1 }, safe: { flex: 1 }, flex: { flex: 1 }, loader: { marginTop: 70 }, content: { width: "100%", maxWidth: 560, alignSelf: "center", padding: 16, paddingBottom: 36 },

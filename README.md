@@ -18,6 +18,7 @@ SmartBRGY is the Barangay Tubod resident mobile app. It connects to the existing
 - Barangay Help Desk conversations with guided categories and admin replies
 - In-app notification center plus opt-in Android/iOS push notifications
 - Resident Profile and Settings for profile correction, security, notification permission, support, privacy information, and sign out
+- SmartBRGY Assistant (Claude AI): barangay Q&A in Bisaya/Tagalog/English, incident-report drafting, announcement translation, and Help Desk hand-off
 
 The old standalone Book Appointment module is intentionally removed. Requested face-to-face meetings are handled inside Incident Reports.
 
@@ -36,6 +37,21 @@ reset existing accounts or data.
 
 For a new Supabase project, run `supabase/schema.sql`, then each `supabase/migration_*.sql` file in number order.
 
+**Every project (new or existing) must also run `supabase/migration_009_fixes_and_ai.sql`.** It adds the
+document-request and Help Desk functions the app calls (only if they are missing), security fixes, and the
+AI assistant usage limits. It is safe to run more than once.
+
+### Building the Android APK/AAB with EAS
+
+`.env` is not uploaded to EAS builds. Set the Supabase values as EAS environment variables once:
+
+```bash
+eas env:create --name EXPO_PUBLIC_SUPABASE_URL --value https://YOUR_PROJECT_REF.supabase.co --environment preview --environment production --visibility plaintext
+eas env:create --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value YOUR_PUBLISHABLE_KEY --environment preview --environment production --visibility plaintext
+```
+
+Also add `smartbrgyv2://reset-password` to Supabase → Authentication → URL Configuration → Redirect URLs so password reset links open the app.
+
 ## Edge Functions and push delivery
 
 Deploy the included functions from the project root:
@@ -44,7 +60,10 @@ Deploy the included functions from the project root:
 npx supabase functions deploy registered-resident --no-verify-jwt
 npx supabase functions deploy manage-resident-access
 npx supabase functions deploy send-push --no-verify-jwt
+npx supabase functions deploy ai-assistant
 ```
+
+The AI assistant needs a Claude API key: `npx supabase secrets set ANTHROPIC_API_KEY=...`. See `supabase/functions/ai-assistant/README.md`.
 
 Set a long random `PUSH_WEBHOOK_SECRET` for `send-push`, then create an INSERT database webhook from `public.notifications` to that function with the same `x-smartbrgy-webhook-secret` header. Full details are in `supabase/functions/send-push/README.md`.
 

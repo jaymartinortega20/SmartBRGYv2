@@ -5,6 +5,7 @@ import {
   Image,
   ImageBackground,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -21,6 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import GradientHeader from "../../components/GradientHeader";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { draftIncidentReport } from "../../lib/ai";
 
 const TYPES = ["Theft", "Fight", "Disturbance", "Harassment", "Suspicious Activity", "Property Damage", "Fire", "Accident", "Other"];
 const AREAS = ["Sitio Ibabaw", "Drilling", "Bulok-bulok", "Centro", "Gawad Kalinga", "Lawm Tabay", "Bakhaw", "Cajocson"];
@@ -31,7 +33,8 @@ const dateValue = (value) => `${value.getFullYear()}-${pad(value.getMonth() + 1)
 const timeValue = (value) => `${pad(value.getHours())}:${pad(value.getMinutes())}`;
 const displayDate = (value) => value.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" });
 const displayTime = (value) => value.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" });
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+// Must match the incident-photos storage bucket limit (5 MB, JPG/PNG/WebP).
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const combineDateAndTime = (date, time) => {
   const value = new Date(date);
@@ -43,7 +46,7 @@ const getImageType = (asset) => {
   const mimeType = String(asset?.mimeType || "").toLowerCase();
   if (mimeType === "image/png") return { extension: "png", contentType: "image/png" };
   if (mimeType === "image/webp") return { extension: "webp", contentType: "image/webp" };
-  if (mimeType === "image/heic" || mimeType === "image/heif") return { extension: "heic", contentType: mimeType };
+  if (mimeType === "image/heic" || mimeType === "image/heif") return null;
   return { extension: "jpg", contentType: "image/jpeg" };
 };
 
@@ -72,6 +75,9 @@ export default function Report() {
   const [preferredTime, setPreferredTime] = useState(new Date());
   const [showPreferredDate, setShowPreferredDate] = useState(false);
   const [showPreferredTime, setShowPreferredTime] = useState(false);
+  const [aiText, setAiText] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiMissing, setAiMissing] = useState([]);
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true);
@@ -113,8 +119,12 @@ export default function Report() {
 
   const acceptPhoto = (asset) => {
     if (!asset?.uri) return;
+    if (!getImageType(asset)) {
+      Alert.alert("Unsupported photo", "Use a JPG, PNG, or WebP photo. HEIC photos are not supported.");
+      return;
+    }
     if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
-      Alert.alert("Photo too large", "Choose a photo smaller than 8 MB.");
+      Alert.alert("Photo too large", "Choose a photo that is 5 MB or smaller.");
       return;
     }
     setPhoto(asset);
@@ -154,6 +164,41 @@ export default function Report() {
       { text: "Choose from gallery", onPress: chooseFromGallery },
       { text: "Cancel", style: "cancel" },
     ]);
+  }
+
+  // Turns the resident's own words into a draft of the form below. Nothing is
+  // submitted: the resident reviews and edits every field first.
+  async function draftWithAssistant() {
+    const value = aiText.trim();
+    if (value.length < 5 || aiLoading) {
+      if (value.length < 5) Alert.alert("Describe the incident", "Write a few words about what happened first.");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const draft = await draftIncidentReport(value);
+      if (TYPES.includes(draft.incident_type)) setIncidentType(draft.incident_type);
+      if (draft.incident_type === "Other") setOtherType(draft.other_type || "");
+      if (URGENCY.includes(draft.urgency)) setUrgency(draft.urgency);
+      if (AREAS.includes(draft.area)) setArea(draft.area);
+      if (draft.landmark) setLandmark(draft.landmark);
+      if (draft.persons_involved) setPersonsInvolved(draft.persons_involved);
+      if (draft.details) setDetails(draft.details);
+      setAiMissing(Array.isArray(draft.missing) ? draft.missing : []);
+      if (draft.emergency) {
+        Alert.alert(
+          "Is someone in danger right now?",
+          "Call the national emergency hotline 911 first. You can submit this report after you are safe.",
+          [{ text: "Call 911", onPress: () => Linking.openURL("tel:911") }, { text: "Continue report", style: "cancel" }]
+        );
+      } else {
+        Alert.alert("Draft ready", "The form below was filled in from your description. Please check every field before submitting.");
+      }
+    } catch (error) {
+      Alert.alert("Assistant unavailable", error.message || "Please fill in the form manually.");
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   function validate() {
@@ -208,8 +253,9 @@ export default function Report() {
         const response = await fetch(photo.uri);
         if (!response.ok) throw new Error("The selected evidence photo could not be read.");
         const bytes = await response.arrayBuffer();
-        if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error("The evidence photo must be smaller than 8 MB.");
+        if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error("The evidence photo must be 5 MB or smaller.");
         const imageType = getImageType(photo);
+        if (!imageType) throw new Error("Use a JPG, PNG, or WebP evidence photo.");
         photoPath = `${authData.user.id}/${reference}-${Date.now()}.${imageType.extension}`;
         const { error: uploadError } = await supabase.storage
           .from("incident-photos")
@@ -253,7 +299,7 @@ export default function Report() {
 
   function resetForm() {
     const now = new Date();
-    setIncidentType(""); setOtherType(""); setUrgency("medium"); setIncidentDate(now); setIncidentTime(now); setArea(""); setLandmark(""); setPersonsInvolved(""); setDetails(""); setPhoto(null); setRequestMeeting(false); setRespondentName(""); setRespondentAddress(""); setMeetingReason(""); setPreferredDate(new Date(Date.now() + 86400000)); setPreferredTime(now); setShowIncidentDate(false); setShowIncidentTime(false); setShowPreferredDate(false); setShowPreferredTime(false);
+    setIncidentType(""); setOtherType(""); setUrgency("medium"); setIncidentDate(now); setIncidentTime(now); setArea(""); setLandmark(""); setPersonsInvolved(""); setDetails(""); setPhoto(null); setRequestMeeting(false); setRespondentName(""); setRespondentAddress(""); setMeetingReason(""); setPreferredDate(new Date(Date.now() + 86400000)); setPreferredTime(now); setShowIncidentDate(false); setShowIncidentTime(false); setShowPreferredDate(false); setShowPreferredTime(false); setAiText(""); setAiMissing([]);
   }
 
   return <ImageBackground source={require("../../assets/images/background-bg.jpg")} style={styles.bg} resizeMode="cover">
@@ -267,6 +313,14 @@ export default function Report() {
           {loadingProfile ? <ActivityIndicator color="#2e7d32" /> : profileError ? <View style={styles.profileErrorBox}><Ionicons name="alert-circle-outline" size={22} color="#a43b32" /><View style={styles.profileDetails}><Text style={styles.profileErrorTitle}>Profile unavailable</Text><Text style={styles.profileErrorText}>{profileError}</Text></View><TouchableOpacity style={styles.retryProfile} onPress={loadProfile}><Text style={styles.retryProfileText}>Retry</Text></TouchableOpacity></View> : <View style={styles.profileBox}><Ionicons name="person-circle" size={42} color="#2e7d32" /><View style={styles.profileDetails}><Text style={styles.profileName}>{profile.full_name}</Text><Text style={styles.profileMeta}>{profile.phone || "No phone number"}</Text><Text style={styles.profileMeta}>{[profile.address, profile.purok].filter(Boolean).join(", ") || "No registered address"}</Text></View></View>}
         </Section>
 
+        <View style={styles.aiCard}>
+          <View style={styles.aiHead}><View style={styles.aiIcon}><Ionicons name="sparkles" size={18} color="#fff" /></View><View style={styles.aiHeadCopy}><Text style={styles.aiTitle}>Help me write this report</Text><Text style={styles.aiHint}>Describe what happened in your own words (Bisaya, Tagalog, or English). The assistant fills in the form for you to review.</Text></View></View>
+          <TextInput style={styles.aiInput} value={aiText} onChangeText={setAiText} placeholder="Example: Gikawatan ko sa akong motor ganina alas 3 sa hapon duol sa kapilya sa Centro…" placeholderTextColor="#929a93" multiline maxLength={2000} editable={!aiLoading} />
+          <TouchableOpacity style={[styles.aiButton, aiLoading && styles.aiButtonDisabled]} onPress={draftWithAssistant} disabled={aiLoading}>
+            {aiLoading ? <ActivityIndicator color="#fff" /> : <><Ionicons name="sparkles" size={17} color="#fff" /><Text style={styles.aiButtonText}>Fill in the form</Text></>}
+          </TouchableOpacity>
+          {aiMissing.length > 0 && <View style={styles.aiMissing}><Text style={styles.aiMissingTitle}>Consider adding:</Text>{aiMissing.map((item) => <Text key={item} style={styles.aiMissingText}>• {item}</Text>)}</View>}
+        </View>
         <Section title="Incident information" subtitle="Tell the barangay what happened.">
           <Label text="Incident category *" />
           <View style={styles.chips}>{TYPES.map((type) => <TouchableOpacity key={type} style={[styles.chip, incidentType === type && styles.chipActive]} onPress={() => setIncidentType(type)}><Text style={[styles.chipText, incidentType === type && styles.chipTextActive]}>{type}</Text></TouchableOpacity>)}</View>
@@ -316,6 +370,19 @@ function PickerModal({ visible, mode, value, minimumDate, maximumDate, onClose, 
 }
 
 const styles = StyleSheet.create({
+  aiCard: { padding: 14, marginBottom: 12, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#cfe6d2", elevation: 3 },
+  aiHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  aiIcon: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 11, backgroundColor: "#2e7d32" },
+  aiHeadCopy: { flex: 1 },
+  aiTitle: { color: "#225d29", fontSize: 14, fontWeight: "900" },
+  aiHint: { color: "#66736a", marginTop: 3, fontSize: 10, lineHeight: 15, fontWeight: "600" },
+  aiInput: { minHeight: 80, maxHeight: 160, marginTop: 11, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: "#dbe5dc", backgroundColor: "#f8fbf8", color: "#243128", fontSize: 12, textAlignVertical: "top" },
+  aiButton: { height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 10, borderRadius: 12, backgroundColor: "#2e7d32" },
+  aiButtonDisabled: { opacity: 0.6 },
+  aiButtonText: { color: "#fff", fontSize: 13, fontWeight: "900" },
+  aiMissing: { marginTop: 10, padding: 10, borderRadius: 11, backgroundColor: "#fff6dc" },
+  aiMissingTitle: { color: "#6d5410", fontSize: 10, fontWeight: "900", marginBottom: 3 },
+  aiMissingText: { color: "#6d5410", fontSize: 10, lineHeight: 15 },
   bg: { flex: 1 }, safe: { flex: 1 }, keyboard: { flex: 1 }, container: { padding: 16, paddingBottom: 105 },
   notice: { flexDirection: "row", alignItems: "center", gap: 11, padding: 14, marginBottom: 12, borderRadius: 15, backgroundColor: "#edf7ee", borderWidth: 1, borderColor: "#cce3cf" }, noticeText: { flex: 1, color: "#455448", fontSize: 11, lineHeight: 17 }, noticeStrong: { color: "#225d29", fontWeight: "900" },
   card: { padding: 16, marginBottom: 13, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 3 },

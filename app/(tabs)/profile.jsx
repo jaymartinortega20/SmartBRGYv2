@@ -16,7 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import GradientHeader from "../../components/GradientHeader";
-import { supabase } from "../../lib/supabase";
+import { getCurrentUserId, supabase } from "../../lib/supabase";
 
 export default function Profile() {
   const router = useRouter();
@@ -29,12 +29,16 @@ export default function Profile() {
     else setLoading(true);
     try {
       const stored = await AsyncStorage.getItem("currentUser");
-      const parsed = stored ? JSON.parse(stored) : {};
-      if (!parsed.id) {
+      let parsed = {};
+      try { parsed = stored ? JSON.parse(stored) : {}; } catch { parsed = {}; }
+      const currentId = await getCurrentUserId();
+      if (!currentId) {
         setUser(parsed);
         return;
       }
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", parsed.id).single();
+      parsed = { ...parsed, id: currentId };
+      setUser((current) => (current?.name ? current : parsed));
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", currentId).single();
       if (error) throw error;
       let profilePic = data.profile_image_path || null;
       if (profilePic && !profilePic.startsWith("http")) {

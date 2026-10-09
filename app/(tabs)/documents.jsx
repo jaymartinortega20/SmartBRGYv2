@@ -439,7 +439,7 @@ const Documents = () => {
       Alert.alert(
         "Submission Failed",
         missingFunction
-          ? "Run fix_document_request_batch.sql in Supabase, then try again."
+          ? "The SmartBRGY database needs an update (supabase/migration_009_fixes_and_ai.sql). Please contact the barangay administrator."
           : error.message || "No requests were created. Please try again."
       );
     } finally {

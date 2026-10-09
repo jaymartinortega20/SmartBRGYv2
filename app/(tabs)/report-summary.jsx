@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import GradientHeader from "../../components/GradientHeader";
 import { supabase } from "../../lib/supabase";
+import { openNativePicker } from "../../lib/datePicker";
 
 const pad = (value) => String(value).padStart(2, "0");
 const dateValue = (value) => `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
@@ -25,7 +25,6 @@ export default function ReportSummary() {
   const [editing, setEditing] = useState(false);
   const [preferredDate, setPreferredDate] = useState(new Date());
   const [preferredTime, setPreferredTime] = useState(new Date());
-  const [picker, setPicker] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const loadReport = useCallback(async () => {
@@ -60,8 +59,16 @@ export default function ReportSummary() {
 
   async function savePreferredSchedule() {
     setSaving(true);
+    const moment = new Date(preferredDate);
+    moment.setHours(preferredTime.getHours(), preferredTime.getMinutes(), 0, 0);
+    if (moment.getTime() <= Date.now()) {
+      setSaving(false);
+      Alert.alert("Invalid schedule", "Choose a preferred meeting date and time in the future.");
+      return;
+    }
     const { error } = await supabase.from("incident_reports").update({ preferred_meeting_date: dateValue(preferredDate), preferred_meeting_time: timeValue(preferredTime), updated_at: new Date().toISOString() }).eq("id", report.id).is("scheduled_meeting_date", null);
-    if (!error) { setEditing(false); await loadReport(); }
+    if (error) Alert.alert("Unable to save availability", error.message || "Please try again.");
+    else { setEditing(false); await loadReport(); }
     setSaving(false);
   }
 
@@ -75,16 +82,15 @@ export default function ReportSummary() {
     <View style={styles.card}><Text style={styles.cardTitle}>Incident summary</Text><Detail icon="warning-outline" label="Incident type" value={report.incident_type} /><Detail icon="alert-circle-outline" label="Urgency" value={report.urgency} /><Detail icon="calendar-outline" label="When it happened" value={[report.incident_date, report.incident_time].filter(Boolean).join(" · ")} /><Detail icon="location-outline" label="Location" value={report.location} /><Detail icon="people-outline" label="Persons involved" value={report.persons_involved || "Not provided"} /><Detail icon="document-text-outline" label="Report details" value={report.details} /></View>
     {report.photo_path && <View style={styles.card}><Text style={styles.cardTitle}>Supporting evidence</Text>{evidenceUrl ? <Image source={{ uri: evidenceUrl }} style={styles.evidence} /> : <Text style={styles.muted}>Evidence preview is temporarily unavailable.</Text>}</View>}
     {report.request_meeting && <View style={styles.card}><View style={styles.meetingHeading}><View><Text style={styles.cardTitle}>Barangay meeting request</Text><Text style={styles.muted}>The final schedule is issued by the barangay official.</Text></View>{canEdit && !editing && <TouchableOpacity style={styles.editButton} onPress={() => setEditing(true)}><Ionicons name="create-outline" size={16} color="#2e7d32" /><Text style={styles.editText}>Edit availability</Text></TouchableOpacity>}</View><Detail icon="person-outline" label="Person requested to appear" value={report.respondent_name} /><Detail icon="location-outline" label="Known address" value={report.respondent_address} /><Detail icon="chatbox-outline" label="Meeting reason" value={report.meeting_reason} />
-      {report.scheduled_meeting_date ? <View style={styles.confirmedBox}><Text style={styles.confirmedTitle}>Official schedule</Text><Text style={styles.confirmedValue}>{report.scheduled_meeting_date} · {report.scheduled_meeting_time}</Text><Text style={styles.confirmedValue}>{report.meeting_venue || "Barangay Tubod Hall"}</Text>{report.assigned_official && <Text style={styles.confirmedSmall}>Assigned official: {report.assigned_official}</Text>}</View> : editing ? <View style={styles.editor}><Text style={styles.editorNote}>Update the times when you are available. The barangay may still issue a different official schedule.</Text><View style={styles.dateRow}><DateButton label="Preferred date" value={displayDate(preferredDate)} icon="calendar-outline" onPress={() => setPicker("date")} /><DateButton label="Preferred time" value={displayTime(preferredTime)} icon="time-outline" onPress={() => setPicker("time")} /></View><View style={styles.editorActions}><TouchableOpacity style={styles.secondary} onPress={() => setEditing(false)}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.primary} onPress={savePreferredSchedule} disabled={saving}><Text style={styles.primaryText}>{saving ? "Saving..." : "Save availability"}</Text></TouchableOpacity></View></View> : <Detail icon="time-outline" label="Preferred schedule" value={[report.preferred_meeting_date, report.preferred_meeting_time].filter(Boolean).join(" · ")} />}
+      {report.scheduled_meeting_date ? <View style={styles.confirmedBox}><Text style={styles.confirmedTitle}>Official schedule</Text><Text style={styles.confirmedValue}>{report.scheduled_meeting_date} · {report.scheduled_meeting_time}</Text><Text style={styles.confirmedValue}>{report.meeting_venue || "Barangay Tubod Hall"}</Text>{report.assigned_official && <Text style={styles.confirmedSmall}>Assigned official: {report.assigned_official}</Text>}</View> : editing ? <View style={styles.editor}><Text style={styles.editorNote}>Update the times when you are available. The barangay may still issue a different official schedule.</Text><View style={styles.dateRow}><DateButton label="Preferred date" value={displayDate(preferredDate)} icon="calendar-outline" onPress={() => openNativePicker({ value: preferredDate, mode: "date", minimumDate: new Date(), onConfirm: setPreferredDate })} /><DateButton label="Preferred time" value={displayTime(preferredTime)} icon="time-outline" onPress={() => openNativePicker({ value: preferredTime, mode: "time", onConfirm: setPreferredTime })} /></View><View style={styles.editorActions}><TouchableOpacity style={styles.secondary} onPress={() => setEditing(false)}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.primary} onPress={savePreferredSchedule} disabled={saving}><Text style={styles.primaryText}>{saving ? "Saving..." : "Save availability"}</Text></TouchableOpacity></View></View> : <Detail icon="time-outline" label="Preferred schedule" value={[report.preferred_meeting_date, report.preferred_meeting_time].filter(Boolean).join(" · ")} />}
     </View>}
     <Text style={styles.footer}>Submitted {new Date(report.created_at).toLocaleString("en-PH")}</Text>
-  </ScrollView><PickerModal visible={!!picker} mode={picker || "date"} value={picker === "time" ? preferredTime : preferredDate} minimumDate={picker === "date" ? new Date() : undefined} onClose={() => setPicker(null)} onConfirm={(value) => picker === "time" ? setPreferredTime(value) : setPreferredDate(value)} /></SafeAreaView></ImageBackground>;
+  </ScrollView></SafeAreaView></ImageBackground>;
 }
 
 function Status({ value }) { return <View style={styles.status}><Text style={styles.statusText}>{String(value || "submitted").replaceAll("_", " ")}</Text></View>; }
 function Detail({ icon, label, value }) { return <View style={styles.detail}><View style={styles.detailIcon}><Ionicons name={icon} size={18} color="#2e7d32" /></View><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value || "—"}</Text></View></View>; }
 function DateButton({ label, value, icon, onPress }) { return <TouchableOpacity style={styles.dateButton} onPress={onPress}><Ionicons name={icon} size={19} color="#2e7d32" /><View><Text style={styles.dateLabel}>{label}</Text><Text style={styles.dateValue}>{value}</Text></View></TouchableOpacity>; }
-function PickerModal({ visible, mode, value, minimumDate, onClose, onConfirm }) { const [draft, setDraft] = useState(value); useEffect(() => { if (visible) setDraft(value); }, [value, visible]); return <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}><View style={styles.overlay}><View style={styles.picker}><View style={styles.pickerTop}><Text style={styles.pickerTitle}>Select preferred {mode}</Text><TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color="#606a62" /></TouchableOpacity></View><DateTimePicker value={draft} mode={mode} display="spinner" minimumDate={minimumDate} themeVariant="light" onChange={(_, selected) => selected && setDraft(selected)} /><View style={styles.editorActions}><TouchableOpacity style={styles.secondary} onPress={onClose}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.primary} onPress={() => { onConfirm(draft); onClose(); }}><Text style={styles.primaryText}>Confirm</Text></TouchableOpacity></View></View></View></Modal>; }
 
 const styles = StyleSheet.create({
   bg: { flex: 1 }, safe: { flex: 1 }, loader: { marginTop: 70 }, content: { padding: 16, paddingBottom: 105 }, back: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingVertical: 8, marginBottom: 7 }, backText: { color: "#2e7d32", fontSize: 11, fontWeight: "900" },

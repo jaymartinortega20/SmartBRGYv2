@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import GradientHeader from "../../components/GradientHeader";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { translateAnnouncement } from "../../lib/ai";
 
 const COLORS = {
   green: "#2e7d32",
@@ -411,6 +412,64 @@ function FeaturedCard({ item, onPress }) {
   );
 }
 
+const TRANSLATE_OPTIONS = [["ceb", "Bisaya"], ["fil", "Tagalog"], ["en", "English"]];
+
+// AI translation and summary of an announcement for residents who prefer
+// another language. Names, dates, places and numbers are kept as written.
+function TranslatePanel({ item }) {
+  const [language, setLanguage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  async function translate(code) {
+    if (loading) return;
+    setLanguage(code);
+    setLoading(true);
+    setError("");
+    setResult(null);
+    try {
+      const text = [
+        `Title: ${item.title}`,
+        `What: ${item.message}`,
+        item.target_audience && `Who: ${item.target_audience}`,
+        item.location && `Where: ${item.location}`,
+        item.purpose && `Why: ${item.purpose}`,
+      ].filter(Boolean).join("\n");
+      setResult(await translateAnnouncement(text, code));
+    } catch (translateError) {
+      setError(translateError.message || "Translation is unavailable right now.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <View style={styles.translateBox}>
+      <View style={styles.translateHead}>
+        <Ionicons name="language-outline" size={17} color="#2e7d32" />
+        <Text style={styles.translateTitle}>Translate & summarize</Text>
+      </View>
+      <View style={styles.translateOptions}>
+        {TRANSLATE_OPTIONS.map(([code, label]) => (
+          <TouchableOpacity key={code} style={[styles.translateChip, language === code && styles.translateChipActive]} onPress={() => translate(code)} disabled={loading}>
+            <Text style={[styles.translateChipText, language === code && styles.translateChipTextActive]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {loading && <ActivityIndicator color="#2e7d32" style={styles.translateLoader} />}
+      {!!error && <Text style={styles.translateError}>{error}</Text>}
+      {result && (
+        <>
+          {!!result.summary && <Text style={styles.translateSummary}>{result.summary}</Text>}
+          <Text style={styles.translateText}>{result.translation}</Text>
+          <Text style={styles.translateNote}>AI translation — the original announcement above is the official version.</Text>
+        </>
+      )}
+    </View>
+  );
+}
+
 function AnnouncementModal({ item, onClose }) {
   const typeStyle = getTypeStyle(item?.announcement_type);
   return (
@@ -460,6 +519,8 @@ function AnnouncementModal({ item, onClose }) {
                   {!!item.contact_number && <DetailRow icon="call-outline" label="Contact number" value={item.contact_number} />}
                 </View>
 
+                <TranslatePanel key={item.id} item={item} />
+
                 <Text style={styles.postedText}>
                   Posted {new Date(item.created_at).toLocaleString("en-PH", {
                     month: "short",
@@ -497,6 +558,19 @@ function DetailRow({ icon, label, value }) {
 }
 
 const styles = StyleSheet.create({
+  translateBox: { marginTop: 12, padding: 12, borderRadius: 14, backgroundColor: "#f4f9f4", borderWidth: 1, borderColor: "#dcebdd" },
+  translateHead: { flexDirection: "row", alignItems: "center", gap: 6 },
+  translateTitle: { color: "#225d29", fontSize: 12, fontWeight: "900" },
+  translateOptions: { flexDirection: "row", gap: 7, marginTop: 9 },
+  translateChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, backgroundColor: "#fff", borderWidth: 1, borderColor: "#cfe0d1" },
+  translateChipActive: { backgroundColor: "#2e7d32", borderColor: "#2e7d32" },
+  translateChipText: { color: "#2e7d32", fontSize: 11, fontWeight: "800" },
+  translateChipTextActive: { color: "#fff" },
+  translateLoader: { marginTop: 10 },
+  translateError: { marginTop: 9, color: "#a43232", fontSize: 11, lineHeight: 16 },
+  translateSummary: { marginTop: 10, color: "#225d29", fontSize: 12, lineHeight: 18, fontWeight: "800" },
+  translateText: { marginTop: 7, color: "#2f3b32", fontSize: 12, lineHeight: 18 },
+  translateNote: { marginTop: 8, color: "#7b867d", fontSize: 9, fontStyle: "italic" },
   background: { flex: 1 },
   safeArea: { flex: 1 },
   content: { padding: 16, paddingBottom: 45 },

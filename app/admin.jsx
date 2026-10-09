@@ -18,6 +18,11 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "../lib/supabase";
 
 const closed = new Set(["claimed", "resolved", "rejected", "closed", "cancelled"]);
+const openCount = (result, fallbackRows) => (
+  result?.status === "fulfilled" && !result.value.error && typeof result.value.count === "number"
+    ? result.value.count
+    : fallbackRows.filter((row) => !closed.has(row.status)).length
+);
 
 export default function MobileAdminDashboard() {
   const router = useRouter();
@@ -51,6 +56,10 @@ export default function MobileAdminDashboard() {
         supabase.from("document_requests").select("id,status,created_at,document_types(name),profiles(full_name)").order("created_at", { ascending: false }).limit(12),
         supabase.from("incident_reports").select("id,status,created_at,incident_type,reference_number").order("created_at", { ascending: false }).limit(12),
         supabase.from("concerns").select("id,status,created_at,category,subject,ticket_number").order("created_at", { ascending: false }).limit(12),
+        // Open counts are computed by the database across all rows, not only the 12 shown.
+        supabase.from("document_requests").select("id", { count: "exact", head: true }).not("status", "in", "(claimed,rejected)"),
+        supabase.from("incident_reports").select("id", { count: "exact", head: true }).not("status", "in", "(resolved,rejected,closed)"),
+        supabase.from("concerns").select("id", { count: "exact", head: true }).not("status", "in", "(resolved,rejected,closed)"),
       ]);
       const residents = results[0].status === "fulfilled" ? results[0].value.count || 0 : 0;
       const documents = results[1].status === "fulfilled" ? results[1].value.data || [] : [];
@@ -61,9 +70,9 @@ export default function MobileAdminDashboard() {
 
       setCounts({
         residents,
-        documents: documents.filter((row) => !closed.has(row.status)).length,
-        reports: reports.filter((row) => !closed.has(row.status)).length,
-        concerns: concerns.filter((row) => !closed.has(row.status)).length,
+        documents: openCount(results[4], documents),
+        reports: openCount(results[5], reports),
+        concerns: openCount(results[6], concerns),
       });
       setRecent([
         ...documents.map((row) => ({ ...row, kind: "Document", title: row.document_types?.name || "Document request", icon: "document-text", color: "#b67a05" })),
