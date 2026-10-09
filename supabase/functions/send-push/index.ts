@@ -47,6 +47,7 @@ Deno.serve(async (request) => {
         notificationId: notification.id,
         type: notification.type || "general",
         relatedId: notification.related_id,
+        relatedTable: notification.related_table,
         target_path: notification.target_path || "/notifications",
       },
     }));

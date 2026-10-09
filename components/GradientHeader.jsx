@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,10 +8,11 @@ import { GRADIENT } from "../constants/theme";
 
 // The one header used on every SmartBRGY screen.
 //   onBack:   true (or a function) shows a back arrow on the left
-//   actions:  [{ icon, onPress, badge, label }] buttons on the right
+//   actions:  [{ icon, onPress, badge, label, image }] buttons on the right
+//             (image: a photo URL shown instead of the icon, e.g. the profile photo)
 //   rightIcon/onRightPress: single right button (kept for older screens)
 // With no actions, the right side shows the barangay logo, which opens Profile.
-export default function GradientHeader({ title, subtitle, eyebrow = "SMARTBRGY Â· BARANGAY TUBOD", onBack, actions, rightIcon, onRightPress }) {
+export default function GradientHeader({ title, subtitle, eyebrow = "SMARTBRGY Â· BARANGAY TUBOD", onBack, actions, rightIcon, onRightPress, avatar }) {
   const router = useRouter();
 
   const goBack = () => {
@@ -30,7 +31,8 @@ export default function GradientHeader({ title, subtitle, eyebrow = "SMARTBRGY Â
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
       ) : null}
-      <View style={[styles.copy, onBack && styles.copyWithBack]}>
+      {avatar ? <HeaderAvatar uri={avatar.uri} onPress={avatar.onPress} /> : null}
+      <View style={[styles.copy, (onBack || avatar) && styles.copyWithBack]}>
         {!!eyebrow && <Text style={styles.eyebrow}>{eyebrow}</Text>}
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
@@ -38,7 +40,11 @@ export default function GradientHeader({ title, subtitle, eyebrow = "SMARTBRGY Â
       <View style={styles.actions}>
         {rightActions ? rightActions.map((action) => (
           <TouchableOpacity key={action.icon} style={styles.action} onPress={action.onPress} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={action.label || action.icon}>
-            <Ionicons name={action.icon} size={22} color="#fff" />
+            {action.image ? (
+              <Image source={{ uri: action.image }} style={styles.avatar} />
+            ) : (
+              <Ionicons name={action.icon} size={22} color="#fff" />
+            )}
             {action.badge > 0 && (
               <View style={styles.badge}><Text style={styles.badgeText}>{action.badge > 9 ? "9+" : action.badge}</Text></View>
             )}
@@ -53,7 +59,26 @@ export default function GradientHeader({ title, subtitle, eyebrow = "SMARTBRGY Â
   );
 }
 
+// The resident's profile photo (falls back to a person icon if there is no
+// photo or it cannot be loaded).
+function HeaderAvatar({ uri, onPress }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [uri]);
+  return (
+    <TouchableOpacity style={styles.profileRing} onPress={onPress} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Open my profile">
+      {uri && !failed ? (
+        <Image source={{ uri }} style={styles.profilePhoto} onError={() => setFailed(true)} />
+      ) : (
+        <View style={styles.profileFallback}><Ionicons name="person" size={26} color="#2e7d32" /></View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
+  profileRing: { width: 52, height: 52, alignItems: "center", justifyContent: "center", borderRadius: 26, backgroundColor: "rgba(255,255,255,0.25)", borderWidth: 2, borderColor: "#fff" },
+  profilePhoto: { width: 46, height: 46, borderRadius: 23 },
+  profileFallback: { width: 46, height: 46, alignItems: "center", justifyContent: "center", borderRadius: 23, backgroundColor: "#eaf6ec" },
   header: {
     minHeight: 76,
     flexDirection: "row",
@@ -83,6 +108,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.35)",
   },
   logo: { width: 39, height: 39 },
+  avatar: { width: 40, height: 40, borderRadius: 12 },
   badge: { position: "absolute", top: -5, right: -5, minWidth: 20, height: 20, paddingHorizontal: 4, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: "#d32f2f", borderWidth: 2, borderColor: "#fff" },
   badgeText: { color: "#fff", fontSize: 10, fontWeight: "900" },
 });

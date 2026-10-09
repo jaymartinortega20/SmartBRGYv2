@@ -18,7 +18,7 @@ import * as ExpoNotifications from "expo-notifications";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import GradientHeader from "../../components/GradientHeader";
-import { getOpenableTarget, syncBadgeCount } from "../../lib/pushNotifications";
+import { resolveNotificationRoute, syncBadgeCount } from "../../lib/pushNotifications";
 import { supabase } from "../../lib/supabase";
 
 const ICONS = {
@@ -208,7 +208,7 @@ export default function Notifications() {
   }
 
   function openSelectedUpdate() {
-    const target = getOpenableTarget(selectedGroup?.latest?.target_path);
+    const target = resolveNotificationRoute(selectedGroup?.latest);
     setSelectedGroup(null);
     if (target) router.navigate(target);
   }
@@ -344,10 +344,20 @@ export default function Notifications() {
       <NotificationTimeline
         group={selectedGroup}
         onClose={() => setSelectedGroup(null)}
-        onOpen={getOpenableTarget(selectedGroup?.latest?.target_path) ? openSelectedUpdate : null}
+        onOpen={resolveNotificationRoute(selectedGroup?.latest) ? openSelectedUpdate : null}
+        openLabel={openLabelFor(resolveNotificationRoute(selectedGroup?.latest))}
       />
     </ImageBackground>
   );
+}
+
+function openLabelFor(route) {
+  const path = String(route || "").split("?")[0];
+  if (path === "/report-summary" || path === "/report") return "Open incident report";
+  if (path === "/documents") return "Open my document requests";
+  if (path === "/feedback") return "Open Help Desk conversation";
+  if (path === "/announcement") return "Open announcement";
+  return "View details";
 }
 
 function NotificationGroup({ title, groups, onOpen }) {
@@ -412,7 +422,7 @@ function NotificationRow({ group, onPress }) {
   );
 }
 
-function NotificationTimeline({ group, onClose, onOpen }) {
+function NotificationTimeline({ group, onClose, onOpen, openLabel }) {
   const latest = group?.latest;
   const [icon, color, background] = ICONS[latest?.type] || ICONS.general;
 
@@ -459,7 +469,7 @@ function NotificationTimeline({ group, onClose, onOpen }) {
 
               {onOpen ? (
                 <TouchableOpacity style={styles.openButton} onPress={onOpen} activeOpacity={0.85}>
-                  <Text style={styles.openButtonText}>View details</Text>
+                  <Text style={styles.openButtonText}>{openLabel}</Text>
                   <Ionicons name="arrow-forward" size={18} color="#fff" />
                 </TouchableOpacity>
               ) : (
@@ -544,5 +554,5 @@ const styles = StyleSheet.create({
   timelineMessage: { color: "#626c64", marginTop: 5, fontSize: 11, lineHeight: 15 },
   timelineDate: { color: "#949b95", marginTop: 6, fontSize: 10 },
   openButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 51, marginTop: 8, borderRadius: 14, backgroundColor: "#2e7d32" },
-  openButtonText: { color: "#fff", fontSize: 12, fontWeight: "900" },
+  openButtonText: { color: "#fff", fontSize: 14, fontWeight: "900" },
 });
