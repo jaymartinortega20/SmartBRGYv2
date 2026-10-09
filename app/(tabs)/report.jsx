@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -77,6 +77,7 @@ export default function Report() {
   const [showPreferredDate, setShowPreferredDate] = useState(false);
   const [showPreferredTime, setShowPreferredTime] = useState(false);
   const router = useRouter();
+  const scrollRef = useRef(null);
   const [myReports, setMyReports] = useState([]);
   const [showAllReports, setShowAllReports] = useState(false);
 
@@ -307,7 +308,9 @@ export default function Report() {
       uploadedPhotoPath = null;
       Alert.alert("Report submitted", `Reference number: ${reference}\n\nYou will receive a notification when the barangay updates your report${requestMeeting ? " or confirms the meeting" : ""}.`);
       resetForm();
-      loadMyReports();
+      await loadMyReports();
+      // My reports is at the top of the screen; bring the resident back to it.
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     } catch (error) {
       if (uploadedPhotoPath) {
         await supabase.storage.from("incident-photos").remove([uploadedPhotoPath]);
@@ -327,7 +330,7 @@ export default function Report() {
     <SafeAreaView style={styles.safe}>
       <GradientHeader title="Report Incident" />
       <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.notice}><Ionicons name="shield-checkmark" size={22} color="#2e7d32" /><Text style={styles.noticeText}><Text style={styles.noticeStrong}>Barangay incident reporting</Text>{"\n"}For immediate danger, contact the appropriate emergency authority.</Text></View>
         {myReports.length > 0 && (
           <View style={styles.myReports}>
