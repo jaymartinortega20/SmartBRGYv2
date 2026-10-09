@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 
+import { useFocusEffect, useRouter } from "expo-router";
 import GradientHeader from "../../components/GradientHeader";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { draftIncidentReport } from "../../lib/ai";
@@ -75,6 +76,25 @@ export default function Report() {
   const [preferredTime, setPreferredTime] = useState(new Date());
   const [showPreferredDate, setShowPreferredDate] = useState(false);
   const [showPreferredTime, setShowPreferredTime] = useState(false);
+  const router = useRouter();
+  const [myReports, setMyReports] = useState([]);
+  const [showAllReports, setShowAllReports] = useState(false);
+
+  // The resident's own reports, so they can always go back and check them.
+  const loadMyReports = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData?.user) return;
+    const { data } = await supabase
+      .from("incident_reports")
+      .select("id,reference_number,incident_type,status,created_at,request_meeting,scheduled_meeting_date")
+      .eq("resident_id", authData.user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setMyReports(data || []);
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadMyReports(); }, [loadMyReports]));
   const [aiText, setAiText] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMissing, setAiMissing] = useState([]);
@@ -287,6 +307,7 @@ export default function Report() {
       uploadedPhotoPath = null;
       Alert.alert("Report submitted", `Reference number: ${reference}\n\nYou will receive a notification when the barangay updates your report${requestMeeting ? " or confirms the meeting" : ""}.`);
       resetForm();
+      loadMyReports();
     } catch (error) {
       if (uploadedPhotoPath) {
         await supabase.storage.from("incident-photos").remove([uploadedPhotoPath]);
@@ -308,6 +329,30 @@ export default function Report() {
       <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.notice}><Ionicons name="shield-checkmark" size={22} color="#2e7d32" /><Text style={styles.noticeText}><Text style={styles.noticeStrong}>Barangay incident reporting</Text>{"\n"}For immediate danger, contact the appropriate emergency authority.</Text></View>
+        {myReports.length > 0 && (
+          <View style={styles.myReports}>
+            <View style={styles.myReportsHead}>
+              <Text style={styles.myReportsTitle}>My reports ({myReports.length})</Text>
+              <Text style={styles.myReportsHint}>Tap a report to see its status</Text>
+            </View>
+            {(showAllReports ? myReports : myReports.slice(0, 3)).map((item) => (
+              <TouchableOpacity key={item.id} style={styles.myReportRow} onPress={() => router.navigate(`/report-summary?reportId=${item.id}`)}>
+                <View style={styles.myReportIcon}><Ionicons name="document-text-outline" size={19} color="#2e7d32" /></View>
+                <View style={styles.myReportCopy}>
+                  <Text style={styles.myReportType} numberOfLines={1}>{item.incident_type}</Text>
+                  <Text style={styles.myReportMeta} numberOfLines={1}>{item.reference_number || "Report"} · {new Date(item.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</Text>
+                </View>
+                <View style={styles.myReportStatus}><Text style={styles.myReportStatusText}>{String(item.status || "pending").replaceAll("_", " ")}</Text></View>
+                <Ionicons name="chevron-forward" size={18} color="#9aa59c" />
+              </TouchableOpacity>
+            ))}
+            {myReports.length > 3 && (
+              <TouchableOpacity style={styles.myReportsMore} onPress={() => setShowAllReports((value) => !value)}>
+                <Text style={styles.myReportsMoreText}>{showAllReports ? "Show fewer" : `Show all ${myReports.length} reports`}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <Section title="Reporter information" subtitle="Automatically taken from your verified profile.">
           {loadingProfile ? <ActivityIndicator color="#2e7d32" /> : profileError ? <View style={styles.profileErrorBox}><Ionicons name="alert-circle-outline" size={22} color="#a43b32" /><View style={styles.profileDetails}><Text style={styles.profileErrorTitle}>Profile unavailable</Text><Text style={styles.profileErrorText}>{profileError}</Text></View><TouchableOpacity style={styles.retryProfile} onPress={loadProfile}><Text style={styles.retryProfileText}>Retry</Text></TouchableOpacity></View> : <View style={styles.profileBox}><Ionicons name="person-circle" size={42} color="#2e7d32" /><View style={styles.profileDetails}><Text style={styles.profileName}>{profile.full_name}</Text><Text style={styles.profileMeta}>{profile.phone || "No phone number"}</Text><Text style={styles.profileMeta}>{[profile.address, profile.purok].filter(Boolean).join(", ") || "No registered address"}</Text></View></View>}
@@ -370,6 +415,19 @@ function PickerModal({ visible, mode, value, minimumDate, maximumDate, onClose, 
 }
 
 const styles = StyleSheet.create({
+  myReports: { padding: 14, marginBottom: 12, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 3 },
+  myReportsHead: { marginBottom: 6 },
+  myReportsTitle: { color: "#225d29", fontSize: 15, fontWeight: "900" },
+  myReportsHint: { color: "#66736a", marginTop: 2, fontSize: 11 },
+  myReportRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#edf1ed" },
+  myReportIcon: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 11, backgroundColor: "#eaf6ec" },
+  myReportCopy: { flex: 1, minWidth: 0 },
+  myReportType: { color: "#2d3a30", fontSize: 13, fontWeight: "900" },
+  myReportMeta: { color: "#7b847d", marginTop: 2, fontSize: 11 },
+  myReportStatus: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 20, backgroundColor: "#fff1c9" },
+  myReportStatusText: { color: "#73530f", fontSize: 10, fontWeight: "900", textTransform: "capitalize" },
+  myReportsMore: { alignSelf: "center", marginTop: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: "#eaf6ec" },
+  myReportsMoreText: { color: "#2e7d32", fontSize: 12, fontWeight: "900" },
   aiCard: { padding: 14, marginBottom: 12, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#cfe6d2", elevation: 3 },
   aiHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   aiIcon: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 11, backgroundColor: "#2e7d32" },

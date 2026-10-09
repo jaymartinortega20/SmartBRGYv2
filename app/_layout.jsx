@@ -10,10 +10,8 @@ import {
   claimNotificationResponse,
   configureNotificationChannel,
   getNotificationTarget,
-  getPushPreference,
   markNotificationRead,
   queueNotificationTarget,
-  registerForPushNotificationsAsync,
 } from "../lib/pushNotifications";
 
 if (Platform.OS !== "web") {
@@ -33,9 +31,6 @@ export default function RootLayout() {
     registerSupabaseAuthLifecycle();
     if (Platform.OS === "web") return undefined;
     configureNotificationChannel().catch(() => {});
-    getPushPreference().then((enabled) => {
-      if (enabled) registerForPushNotificationsAsync().catch(() => {});
-    });
 
     // Each tapped notification is handled once: mark it read, then let the
     // signed-in tab layout open its screen.

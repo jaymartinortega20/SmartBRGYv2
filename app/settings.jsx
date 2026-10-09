@@ -23,6 +23,7 @@ import GradientHeader from "../components/GradientHeader";
 import { supabase } from "../lib/supabase";
 import {
   disablePushNotificationsAsync,
+  disablePushNotificationsLocally,
   getPushMode,
   getPushPreference,
   registerForPushNotificationsAsync,
@@ -87,9 +88,9 @@ export default function Settings() {
     Alert.alert("Sign out", "Are you sure you want to sign out of SmartBRGY?", [
       { text: "Cancel", style: "cancel" },
       { text: "Sign out", style: "destructive", onPress: async () => {
-        try { await disablePushNotificationsAsync(); } catch {}
+        try { await disablePushNotificationsLocally(); } catch {}
         await supabase.auth.signOut();
-        await AsyncStorage.multiRemove(["currentUser", "isAdmin", "hasOnboarded"]);
+        await AsyncStorage.multiRemove(["currentUser", "isAdmin"]);
         router.replace("/login");
       } },
     ]);

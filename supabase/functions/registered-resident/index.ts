@@ -40,7 +40,12 @@ Deno.serve(async (request) => {
     const { data: signup, error: signupError } = await anon.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, birthdate, address, purok, phone } },
+      options: {
+        data: { full_name: fullName, birthdate, address, purok, phone },
+        // The verification link opens the SmartBRGY app's login screen.
+        // Add this URL in Supabase → Authentication → URL Configuration → Redirect URLs.
+        emailRedirectTo: Deno.env.get("EMAIL_REDIRECT_URL") || "smartbrgyv2://login",
+      },
     });
     if (signupError || !signup.user) throw new Error(signupError?.message || "Unable to create the resident account.");
     // With email confirmation on, Supabase returns a placeholder user (no

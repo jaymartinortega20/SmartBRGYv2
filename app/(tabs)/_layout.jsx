@@ -4,7 +4,7 @@ import { Redirect, Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getValidatedAppUser } from "../../lib/supabase";
-import { onQueuedNotificationTarget, takeQueuedNotificationTarget } from "../../lib/pushNotifications";
+import { autoEnablePushNotifications, onQueuedNotificationTarget, takeQueuedNotificationTarget } from "../../lib/pushNotifications";
 
 const tabs = {
   index: ["Home", "home"],
@@ -47,6 +47,11 @@ export default function TabsLayout() {
     openQueued();
     return onQueuedNotificationTarget(openQueued);
   }, [authState, router]);
+
+  // Make sure this phone is registered for push alerts for this resident.
+  useEffect(() => {
+    if (authState === "authorized") autoEnablePushNotifications().catch(() => undefined);
+  }, [authState]);
 
   if (authState === "checking") {
     return (

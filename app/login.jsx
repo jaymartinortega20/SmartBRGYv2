@@ -19,7 +19,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
 import { isNetworkError, isSupabaseConfigured, supabase } from "../lib/supabase";
-import { getPushPreference, registerForPushNotificationsAsync } from "../lib/pushNotifications";
 import { GRADIENT } from "../constants/theme";
 
 export default function Login() {
@@ -90,11 +89,6 @@ export default function Login() {
         "isAdmin",
         profile.role === "admin" ? "true" : "false",
       );
-
-      // Re-link this phone's push token to the account that just signed in.
-      getPushPreference()
-        .then((enabled) => (enabled ? registerForPushNotificationsAsync() : null))
-        .catch(() => undefined);
 
       if (profile.role === "admin") {
         router.replace("/admin");

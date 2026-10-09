@@ -9,7 +9,8 @@ import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 
 const CATEGORIES = ["Garbage Collection", "Drainage/Flooding", "Streetlight", "Road or Pathway Damage", "Water Supply", "Stray Animals", "Public Cleanliness", "Barangay Service Complaint", "Request for Assistance", "Suggestion", "Other"];
 const AREAS = ["Sitio Ibabaw", "Drilling", "Bulok-bulok", "Centro", "Gawad Kalinga", "Lawm Tabay", "Bakhaw", "Cajocson"];
-const CLOSED_STATUSES = ["resolved", "rejected", "closed"];
+// "Resolved" conversations stay open: a reply reopens them if the problem is not fixed.
+const CLOSED_STATUSES = ["rejected", "closed"];
 const MESSAGE_PAGE_SIZE = 50;
 const firstParam = (value) => (Array.isArray(value) ? value[0] : value) || "";
 
@@ -230,7 +231,7 @@ export default function Feedback() {
         <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.chatContent} keyboardShouldPersistTaps="handled" onScroll={({ nativeEvent }) => { nearBottom.current = nativeEvent.contentSize.height - nativeEvent.layoutMeasurement.height - nativeEvent.contentOffset.y < 90; }} scrollEventThrottle={16} onContentSizeChange={() => { if (nearBottom.current) scrollRef.current?.scrollToEnd({ animated: true }); }}>
           {wizard ? <Wizard profile={profile} wizard={wizard} chooseCategory={chooseCategory} chooseArea={chooseArea} onConfirm={createTicket} sending={sending} /> : <Conversation messages={messages} ticket={active} loading={loadingMessages} hasOlder={hasOlderMessages} onLoadOlder={() => { messageLimit.current += MESSAGE_PAGE_SIZE; loadMessages(messageLimit.current); }} />}
         </ScrollView>
-        {active && CLOSED_STATUSES.includes(String(active.status).toLowerCase()) ? <View style={styles.closedBanner}><Ionicons name="lock-closed" size={16} color="#6d756e" /><Text style={styles.closedText}>This conversation is closed and read-only.</Text></View> : ((wizard && ["landmark", "details"].includes(wizard.stage)) || active) && <View style={styles.composer}><TextInput style={styles.composerInput} value={composer} onChangeText={setComposer} maxLength={2000} multiline placeholder={wizard?.stage === "landmark" ? "Enter specific location or landmark" : wizard?.stage === "details" ? "Describe your concern" : "Reply to Barangay Help Desk"} placeholderTextColor="#8b948d" /><TouchableOpacity style={[styles.send, (!composer.trim() || sending) && styles.sendDisabled]} disabled={!composer.trim() || sending} onPress={wizard ? submitWizardText : sendMessage}>{sending ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={19} color="#fff" />}</TouchableOpacity></View>}
+        {active && CLOSED_STATUSES.includes(String(active.status).toLowerCase()) ? <View style={styles.closedBanner}><Ionicons name="lock-closed" size={16} color="#6d756e" /><Text style={styles.closedText}>This conversation is closed and read-only.</Text></View> : ((wizard && ["landmark", "details"].includes(wizard.stage)) || active) && <View style={styles.composer}><TextInput style={styles.composerInput} value={composer} onChangeText={setComposer} maxLength={2000} multiline placeholder={wizard?.stage === "landmark" ? "Enter specific location or landmark" : wizard?.stage === "details" ? "Describe your concern" : String(active?.status) === "resolved" ? "Marked resolved. Not fixed? Reply here." : "Reply to Barangay Help Desk"} placeholderTextColor="#8b948d" /><TouchableOpacity style={[styles.send, (!composer.trim() || sending) && styles.sendDisabled]} disabled={!composer.trim() || sending} onPress={wizard ? submitWizardText : sendMessage}>{sending ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={19} color="#fff" />}</TouchableOpacity></View>}
       </KeyboardAvoidingView>}
   </SafeAreaView></ImageBackground>;
 }
@@ -241,15 +242,15 @@ function TicketList({ tickets, onOpen, onNew, onAsk, refreshing, onRefresh, erro
 
 function Wizard({ profile, wizard, chooseCategory, chooseArea, onConfirm, sending }) {
   return <><SystemBubble text={`Hi ${profile?.full_name || "Resident of Barangay Tubod"}! What is your concern today?`} />
-    {wizard.category && <UserBubble text={wizard.category} />}
+    {!!wizard.category && <UserBubble text={wizard.category} />}
     {wizard.stage === "category" && <QuickReplies values={CATEGORIES} onChoose={chooseCategory} />}
-    {wizard.category && <SystemBubble text="Where is the concern located?" />}
-    {wizard.area && <UserBubble text={wizard.area} />}
+    {!!wizard.category && <SystemBubble text="Where is the concern located?" />}
+    {!!wizard.area && <UserBubble text={wizard.area} />}
     {wizard.stage === "area" && <QuickReplies values={AREAS} onChoose={chooseArea} />}
-    {wizard.area && <SystemBubble text="Please provide a specific landmark, street, or nearby establishment." />}
-    {wizard.landmark && <UserBubble text={wizard.landmark} />}
+    {!!wizard.area && <SystemBubble text="Please provide a specific landmark, street, or nearby establishment." />}
+    {!!wizard.landmark && <UserBubble text={wizard.landmark} />}
     {wizard.stage === "details" && <SystemBubble text="Please describe the concern clearly so the barangay can assist you." />}
-    {wizard.details && <UserBubble text={wizard.details} />}
+    {!!wizard.details && <UserBubble text={wizard.details} />}
     {wizard.stage === "review" && <><SystemBubble text="Please review the concern before submitting." /><View style={styles.review}><Text style={styles.reviewTitle}>Concern summary</Text><Summary label="Category" value={wizard.category} /><Summary label="Area" value={wizard.area} /><Summary label="Location" value={wizard.landmark} /><Summary label="Details" value={wizard.details} /><TouchableOpacity style={styles.confirm} onPress={onConfirm} disabled={sending}><Text style={styles.confirmText}>{sending ? "Submitting..." : "Confirm and Start Conversation"}</Text></TouchableOpacity></View></>}
   </>;
 }

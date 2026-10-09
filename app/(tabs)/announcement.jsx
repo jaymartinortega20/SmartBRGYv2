@@ -384,10 +384,17 @@ function AnnouncementCard({ item, onPress, history }) {
         </View>
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text numberOfLines={2} style={styles.cardMessage}>{item.message}</Text>
-        <View style={styles.metaRow}>
-          <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
-          <Text style={styles.metaText}>{formatEventDate(item.event_date, item.event_time)}</Text>
-        </View>
+        {item.event_date ? (
+          <View style={styles.metaRow}>
+            <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
+            <Text style={styles.metaText}>{formatEventDate(item.event_date, item.event_time)}</Text>
+          </View>
+        ) : (
+          <View style={styles.metaRow}>
+            <Ionicons name="time-outline" size={14} color={COLORS.muted} />
+            <Text style={styles.metaText}>Posted {new Date(item.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</Text>
+          </View>
+        )}
         {!!item.target_audience && (
           <View style={styles.metaRow}>
             <Ionicons name="people-outline" size={14} color={COLORS.muted} />
@@ -419,7 +426,7 @@ function FeaturedCard({ item, onPress }) {
       <Text style={styles.featuredTitle}>{item.title}</Text>
       <Text numberOfLines={3} style={styles.featuredMessage}>{item.message}</Text>
       <View style={styles.featuredFooter}>
-        <Text style={styles.featuredMeta}>{formatEventDate(item.event_date, item.event_time)}</Text>
+        <Text style={styles.featuredMeta}>{item.event_date ? formatEventDate(item.event_date, item.event_time) : "Posted " + new Date(item.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}</Text>
         <View style={styles.viewDetails}>
           <Text style={styles.viewDetailsText}>View details</Text>
           <Ionicons name="arrow-forward" size={15} color="#fff" />
@@ -525,11 +532,13 @@ function AnnouncementModal({ item, onClose }) {
                 <View style={styles.detailsBox}>
                   <DetailRow icon="information-circle-outline" label="What" value={item.message} />
                   {!!item.target_audience && <DetailRow icon="people-outline" label="Who" value={item.target_audience} />}
-                  <DetailRow
-                    icon="calendar-outline"
-                    label="When"
-                    value={formatEventRange(item)}
-                  />
+                  {!!item.event_date && (
+                    <DetailRow
+                      icon="calendar-outline"
+                      label="When"
+                      value={formatEventRange(item)}
+                    />
+                  )}
                   {!!item.location && <DetailRow icon="location-outline" label="Where" value={item.location} />}
                   {!!item.purpose && <DetailRow icon="help-circle-outline" label="Why" value={item.purpose} />}
                   {!!item.contact_person && <DetailRow icon="person-outline" label="Contact" value={item.contact_person} />}

@@ -11,7 +11,7 @@ SmartBRGY is the Barangay Tubod resident mobile app. It connects to the existing
 
 - Barangay Tubod registration with birthdate/Purok pickers and private front/back valid-ID attachments
 - Responsive resident Home with service shortcuts, active-request counts, latest announcement, and notification badge
-- Structured 5 W's announcements, search, detail preview, and attendance confirmation
+- Structured 5 W's announcements with search and detail preview
 - Multi-document requests for Barangay Clearance, Certificate of Indigency, Certificate of Residency, Barangay Business Permit/Clearance, and Cedula
 - Separate copies and purpose per document, payment-upon-pickup notes, representative ID/authorization attachments, and resident/admin claim confirmation
 - Incident reporting with date/time, location, urgency, evidence photo, optional barangay meeting, editable availability, and ticket summaries
@@ -65,7 +65,19 @@ npx supabase functions deploy ai-assistant
 
 The AI assistant needs an AI key. Free option: `npx supabase secrets set GEMINI_API_KEY=...` (key from aistudio.google.com). See `supabase/functions/ai-assistant/README.md`.
 
-Set a long random `PUSH_WEBHOOK_SECRET` for `send-push`, then create an INSERT database webhook from `public.notifications` to that function with the same `x-smartbrgy-webhook-secret` header. Full details are in `supabase/functions/send-push/README.md`.
+Push delivery is automatic after running `supabase/migration_011_notifications_and_push.sql`
+(no manual Database Webhook needed). Use the same secret in both places:
+
+```bash
+npx supabase secrets set PUSH_WEBHOOK_SECRET=your-long-random-secret
+```
+
+```sql
+-- Supabase SQL Editor
+select vault.create_secret('your-long-random-secret', 'push_webhook_secret');
+```
+
+Android push also needs the Firebase (FCM V1) key uploaded once with `eas credentials`.
 
 Expo Go uses notification-center and local/in-app alerts without an EAS project ID.
 True push while the app is fully closed requires an installed development/preview/

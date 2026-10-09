@@ -684,7 +684,7 @@ const Documents = () => {
                     <RequestInfo label="Requested" value={formatDate(item.created_at)} />
                   </View>
 
-                  {item.claim_schedule && (
+                  {!!item.claim_schedule && (
                     <View style={styles.claimScheduleBox}>
                       <Ionicons name="calendar-outline" size={18} color="#1b6b20" />
                       <View style={styles.flex}>
@@ -694,7 +694,7 @@ const Documents = () => {
                     </View>
                   )}
 
-                  {item.admin_note && (
+                  {!!item.admin_note && (
                     <View style={styles.adminNoteBox}>
                       <Text style={styles.adminNoteTitle}>Barangay note</Text>
                       <Text style={styles.guideText}>{item.admin_note}</Text>
