@@ -20,6 +20,7 @@ import { useRouter } from "expo-router";
 
 import { isNetworkError, isSupabaseConfigured, supabase } from "../lib/supabase";
 import { getPushPreference, registerForPushNotificationsAsync } from "../lib/pushNotifications";
+import { GRADIENT } from "../constants/theme";
 
 export default function Login() {
   const router = useRouter();
@@ -246,7 +247,7 @@ export default function Login() {
                 activeOpacity={0.85}
               >
                 <LinearGradient
-                  colors={["#257438", "#3c984d", "#d99d19"]}
+                  colors={GRADIENT}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={[styles.loginButton, loading && styles.disabled]}
@@ -329,11 +330,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#cbe2ce",
   },
-  noticeText: { flex: 1, color: "#526457", fontSize: 9, lineHeight: 14 },
+  noticeText: { flex: 1, color: "#526457", fontSize: 11, lineHeight: 14 },
   card: {
     padding: 16,
     marginBottom: 12,
-    borderRadius: 19,
+    borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.97)",
     borderWidth: 1,
     borderColor: "#dce7de",
@@ -344,13 +345,13 @@ const styles = StyleSheet.create({
     color: "#7d877f",
     marginTop: 3,
     marginBottom: 15,
-    fontSize: 9,
+    fontSize: 11,
     lineHeight: 14,
   },
   fieldLabel: {
     color: "#445448",
     marginBottom: 6,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "900",
   },
   passwordHeading: {
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
   forgotText: {
     color: "#2e7d32",
     marginBottom: 6,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "900",
   },
   inputWrap: {
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
   loginButtonText: { color: "#fff", fontSize: 13, fontWeight: "900" },
   disabled: { opacity: 0.5 },
   registerLink: { alignItems: "center", padding: 15 },
-  registerLinkText: { color: "#69736b", textAlign: "center", fontSize: 10 },
+  registerLinkText: { color: "#69736b", textAlign: "center", fontSize: 11 },
   registerStrong: { color: "#2e7d32", fontWeight: "900" },
   securityNote: {
     flexDirection: "row",
@@ -409,5 +410,5 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: -3,
   },
-  securityText: { color: "#718075", fontSize: 8, fontWeight: "700" },
+  securityText: { color: "#718075", fontSize: 10, fontWeight: "700" },
 });

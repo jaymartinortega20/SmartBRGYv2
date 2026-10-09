@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getValidatedAppUser } from "../../lib/supabase";
+import { onQueuedNotificationTarget, takeQueuedNotificationTarget } from "../../lib/pushNotifications";
 
 const tabs = {
   index: ["Home", "home"],
@@ -34,6 +35,19 @@ export default function TabsLayout() {
     };
   }, []);
 
+  // Open a tapped push notification only after the resident is confirmed
+  // signed in (on app start, and while the app is already open).
+  const router = useRouter();
+  useEffect(() => {
+    if (authState !== "authorized") return undefined;
+    const openQueued = () => {
+      const target = takeQueuedNotificationTarget();
+      if (target) setTimeout(() => router.navigate(target), 50);
+    };
+    openQueued();
+    return onQueuedNotificationTarget(openQueued);
+  }, [authState, router]);
+
   if (authState === "checking") {
     return (
       <View style={styles.loading}>
@@ -49,6 +63,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       initialRouteName="index"
+      backBehavior="history"
       screenOptions={({ route }) => {
         const item = tabs[route.name];
         return {
@@ -57,7 +72,7 @@ export default function TabsLayout() {
           tabBarInactiveTintColor: "#8a948c",
           tabBarHideOnKeyboard: true,
           tabBarLabelStyle: {
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: "800",
             marginTop: 1,
           },
@@ -92,7 +107,6 @@ export default function TabsLayout() {
       ))}
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
-      <Tabs.Screen name="notification-details" options={{ href: null }} />
       <Tabs.Screen name="report-summary" options={{ href: null }} />
       <Tabs.Screen name="assistant" options={{ href: null }} />
     </Tabs>

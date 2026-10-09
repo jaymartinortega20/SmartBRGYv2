@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { GRADIENT } from "../constants/theme";
 
 export default function Welcome() {
   const router = useRouter();
@@ -77,7 +78,7 @@ export default function Welcome() {
               accessibilityRole="button"
             >
               <LinearGradient
-                colors={["#257438", "#43a047", "#d89b18"]}
+                colors={GRADIENT}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.primaryGradient}
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   },
   officialText: {
     color: "#527057",
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.8,
   },
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     padding: 20,
     backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 22,
+    borderRadius: 16,
     elevation: 7,
     shadowColor: "#153c1c",
     shadowOpacity: 0.15,
@@ -249,10 +250,10 @@ const styles = StyleSheet.create({
   },
   actionCopy: { flex: 1 },
   primaryTitle: { color: "#fff", fontSize: 14, fontWeight: "900" },
-  primaryDescription: { color: "rgba(255,255,255,0.85)", fontSize: 9, marginTop: 2 },
+  primaryDescription: { color: "rgba(255,255,255,0.85)", fontSize: 11, marginTop: 2 },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 13 },
   divider: { flex: 1, height: 1, backgroundColor: "#e1e7e2" },
-  dividerText: { color: "#9aa19c", fontSize: 9, fontWeight: "800" },
+  dividerText: { color: "#9aa19c", fontSize: 11, fontWeight: "800" },
   registerButton: {
     minHeight: 66,
     flexDirection: "row",
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   registerTitle: { color: "#2e7d32", fontSize: 14, fontWeight: "900" },
-  registerDescription: { color: "#667268", fontSize: 9, marginTop: 2 },
+  registerDescription: { color: "#667268", fontSize: 11, marginTop: 2 },
   residentNotice: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff8e7",
     borderRadius: 12,
   },
-  noticeText: { flex: 1, color: "#6f592d", fontSize: 10, lineHeight: 15 },
+  noticeText: { flex: 1, color: "#6f592d", fontSize: 11, lineHeight: 15 },
   footer: {
     maxWidth: 390,
     alignSelf: "center",
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
   footerText: {
     flexShrink: 1,
     color: "#667268",
-    fontSize: 9,
+    fontSize: 11,
     lineHeight: 14,
     textAlign: "center",
   },

@@ -14,10 +14,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import * as ExpoNotifications from "expo-notifications";
+import { useFocusEffect, useRouter } from "expo-router";
 
 import GradientHeader from "../../components/GradientHeader";
-import { normalizeAppRoute } from "../../lib/pushNotifications";
+import { getOpenableTarget, syncBadgeCount } from "../../lib/pushNotifications";
 import { supabase } from "../../lib/supabase";
 
 const ICONS = {
@@ -137,9 +138,14 @@ export default function Notifications() {
     }
   }, []);
 
-  useEffect(() => {
+  // Reload whenever the screen is opened (tab screens stay mounted).
+  useFocusEffect(useCallback(() => {
     void load();
-  }, [load]);
+  }, [load]));
+
+  useEffect(() => {
+    syncBadgeCount(rows.filter((item) => !item.is_read).length);
+  }, [rows]);
 
   useEffect(() => {
     if (!userId) return undefined;
@@ -202,7 +208,7 @@ export default function Notifications() {
   }
 
   function openSelectedUpdate() {
-    const target = normalizeAppRoute(selectedGroup?.latest?.target_path);
+    const target = getOpenableTarget(selectedGroup?.latest?.target_path);
     setSelectedGroup(null);
     if (target) router.navigate(target);
   }
@@ -223,6 +229,7 @@ export default function Notifications() {
     }
 
     setRows((current) => current.map((row) => ({ ...row, is_read: true, read_at: readAt })));
+    ExpoNotifications.dismissAllNotificationsAsync().catch(() => undefined);
   }
 
   return (
@@ -231,11 +238,7 @@ export default function Notifications() {
       style={styles.bg}
     >
       <SafeAreaView style={styles.safe}>
-        <GradientHeader
-          title="Notifications"
-          rightIcon="close"
-          onRightPress={() => router.navigate("/(tabs)")}
-        />
+        <GradientHeader title="Notifications" subtitle="Barangay service updates" onBack />
 
         <ScrollView
           contentContainerStyle={styles.content}
@@ -341,7 +344,7 @@ export default function Notifications() {
       <NotificationTimeline
         group={selectedGroup}
         onClose={() => setSelectedGroup(null)}
-        onOpen={openSelectedUpdate}
+        onOpen={getOpenableTarget(selectedGroup?.latest?.target_path) ? openSelectedUpdate : null}
       />
     </ImageBackground>
   );
@@ -454,10 +457,17 @@ function NotificationTimeline({ group, onClose, onOpen }) {
                 ))}
               </ScrollView>
 
-              <TouchableOpacity style={styles.openButton} onPress={onOpen} activeOpacity={0.85}>
-                <Text style={styles.openButtonText}>View details</Text>
-                <Ionicons name="arrow-forward" size={18} color="#fff" />
-              </TouchableOpacity>
+              {onOpen ? (
+                <TouchableOpacity style={styles.openButton} onPress={onOpen} activeOpacity={0.85}>
+                  <Text style={styles.openButtonText}>View details</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#fff" />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.openButton} onPress={onClose} activeOpacity={0.85}>
+                  <Text style={styles.openButtonText}>Done</Text>
+                  <Ionicons name="checkmark" size={18} color="#fff" />
+                </TouchableOpacity>
+              )}
             </>
           )}
         </Pressable>
@@ -475,18 +485,18 @@ const styles = StyleSheet.create({
   heroDot: { position: "absolute", top: 7, right: 7, width: 9, height: 9, borderRadius: 5, backgroundColor: "#ef5350", borderWidth: 2, borderColor: "#fff" },
   heroCopy: { flex: 1, marginLeft: 12 },
   title: { color: "#225d29", fontSize: 18, fontWeight: "900" },
-  subtitle: { color: "#737d75", marginTop: 3, fontSize: 10, lineHeight: 14 },
+  subtitle: { color: "#737d75", marginTop: 3, fontSize: 11, lineHeight: 14 },
   markButton: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 8, borderRadius: 10, backgroundColor: "#eaf6ec" },
-  markAll: { color: "#2e7d32", fontSize: 9, fontWeight: "900" },
+  markAll: { color: "#2e7d32", fontSize: 11, fontWeight: "900" },
   filters: { gap: 8, paddingBottom: 15 },
   filter: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.95)", borderWidth: 1, borderColor: "#dce5dd" },
   filterActive: { backgroundColor: "#2e7d32", borderColor: "#2e7d32" },
-  filterText: { color: "#49604d", fontSize: 10, fontWeight: "800" },
+  filterText: { color: "#49604d", fontSize: 11, fontWeight: "800" },
   filterTextActive: { color: "#fff" },
   group: { marginBottom: 17 },
   groupHeading: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 8 },
   groupTitle: { color: "#225d29", fontSize: 13, fontWeight: "900" },
-  groupCount: { minWidth: 19, paddingHorizontal: 5, paddingVertical: 2, overflow: "hidden", color: "#607064", backgroundColor: "#e5ece6", borderRadius: 9, textAlign: "center", fontSize: 8, fontWeight: "900" },
+  groupCount: { minWidth: 19, paddingHorizontal: 5, paddingVertical: 2, overflow: "hidden", color: "#607064", backgroundColor: "#e5ece6", borderRadius: 9, textAlign: "center", fontSize: 10, fontWeight: "900" },
   row: { flexDirection: "row", alignItems: "center", gap: 11, padding: 13, marginBottom: 9, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 2 },
   unreadRow: { borderColor: "#82ba8a", backgroundColor: "#f7fff8" },
   icon: { width: 47, height: 47, alignItems: "center", justifyContent: "center", borderRadius: 14 },
@@ -494,24 +504,24 @@ const styles = StyleSheet.create({
   rowTitleLine: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowTitle: { flex: 1, color: "#273329", fontSize: 12, fontWeight: "900" },
   importantPill: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8, backgroundColor: "#ffebee" },
-  importantText: { color: "#c62828", fontSize: 7, fontWeight: "900" },
-  message: { color: "#626d64", marginTop: 4, fontSize: 10, lineHeight: 15 },
+  importantText: { color: "#c62828", fontSize: 10, fontWeight: "900" },
+  message: { color: "#626d64", marginTop: 4, fontSize: 11, lineHeight: 15 },
   rowMeta: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 7 },
-  date: { color: "#879188", fontSize: 8, fontWeight: "700" },
+  date: { color: "#879188", fontSize: 10, fontWeight: "700" },
   updatePill: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8, backgroundColor: "#eaf6ec" },
-  updateText: { color: "#2e7d32", fontSize: 7, fontWeight: "900" },
+  updateText: { color: "#2e7d32", fontSize: 10, fontWeight: "900" },
   unreadBadge: { minWidth: 22, height: 22, alignItems: "center", justifyContent: "center", paddingHorizontal: 5, borderRadius: 11, backgroundColor: "#d32f2f" },
-  unreadBadgeText: { color: "#fff", fontSize: 9, fontWeight: "900" },
+  unreadBadgeText: { color: "#fff", fontSize: 11, fontWeight: "900" },
   loader: { marginTop: 55 },
-  errorCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 15, borderRadius: 15, backgroundColor: "#fff4f3", borderWidth: 1, borderColor: "#efc1bd" },
+  errorCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 15, borderRadius: 16, backgroundColor: "#fff4f3", borderWidth: 1, borderColor: "#efc1bd" },
   errorCopy: { flex: 1 },
   errorTitle: { color: "#8d2f2b", fontSize: 11, fontWeight: "900" },
-  errorText: { color: "#8d5f5b", marginTop: 3, fontSize: 9, lineHeight: 13 },
-  retry: { color: "#b33a35", fontSize: 10, fontWeight: "900" },
+  errorText: { color: "#8d5f5b", marginTop: 3, fontSize: 11, lineHeight: 13 },
+  retry: { color: "#b33a35", fontSize: 11, fontWeight: "900" },
   empty: { alignItems: "center", padding: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.95)", borderWidth: 1, borderColor: "#dfe8e0" },
   emptyIcon: { width: 62, height: 62, alignItems: "center", justifyContent: "center", borderRadius: 21, backgroundColor: "#eaf6ec" },
   emptyTitle: { color: "#2e3b31", marginTop: 12, fontWeight: "900" },
-  emptyText: { maxWidth: 260, color: "#79817a", marginTop: 6, textAlign: "center", fontSize: 10, lineHeight: 15 },
+  emptyText: { maxWidth: 260, color: "#79817a", marginTop: 6, textAlign: "center", fontSize: 11, lineHeight: 15 },
   overlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(17,31,20,0.48)" },
   sheet: { maxHeight: "82%", paddingHorizontal: 18, paddingTop: 9, paddingBottom: 24, backgroundColor: "#fff", borderTopLeftRadius: 25, borderTopRightRadius: 25 },
   handle: { alignSelf: "center", width: 42, height: 5, marginBottom: 15, borderRadius: 3, backgroundColor: "#d9ded9" },
@@ -519,7 +529,7 @@ const styles = StyleSheet.create({
   sheetIcon: { width: 47, height: 47, alignItems: "center", justifyContent: "center", borderRadius: 14 },
   sheetHeaderCopy: { flex: 1, marginHorizontal: 11 },
   sheetTitle: { color: "#26352a", fontSize: 14, fontWeight: "900" },
-  sheetSubtitle: { color: "#7a857d", marginTop: 3, fontSize: 9 },
+  sheetSubtitle: { color: "#7a857d", marginTop: 3, fontSize: 11 },
   closeButton: { width: 35, height: 35, alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: "#f0f4f0" },
   timeline: { marginTop: 15 },
   timelineItem: { flexDirection: "row", minHeight: 86 },
@@ -530,9 +540,9 @@ const styles = StyleSheet.create({
   timelineCard: { flex: 1, paddingBottom: 15, marginLeft: 7 },
   timelineTitleLine: { flexDirection: "row", alignItems: "center", gap: 7 },
   timelineTitle: { flex: 1, color: "#2d3930", fontSize: 11, fontWeight: "900" },
-  latestLabel: { color: "#2e7d32", fontSize: 7, fontWeight: "900" },
-  timelineMessage: { color: "#626c64", marginTop: 5, fontSize: 10, lineHeight: 15 },
-  timelineDate: { color: "#949b95", marginTop: 6, fontSize: 8 },
+  latestLabel: { color: "#2e7d32", fontSize: 10, fontWeight: "900" },
+  timelineMessage: { color: "#626c64", marginTop: 5, fontSize: 11, lineHeight: 15 },
+  timelineDate: { color: "#949b95", marginTop: 6, fontSize: 10 },
   openButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 51, marginTop: 8, borderRadius: 14, backgroundColor: "#2e7d32" },
   openButtonText: { color: "#fff", fontSize: 12, fontWeight: "900" },
 });

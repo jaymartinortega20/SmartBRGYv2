@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { GRADIENT } from "../constants/theme";
 
 const SLIDES = [
   {
@@ -163,7 +164,7 @@ export default function Onboarding() {
             ) : <View style={styles.backPlaceholder} />}
 
             <TouchableOpacity style={styles.continueTouch} onPress={continueFlow} activeOpacity={0.86} disabled={finishing}>
-              <LinearGradient colors={["#2e7d32", "#f9a825"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.continueButton}>
+              <LinearGradient colors={GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.continueButton}>
                 <Text style={styles.continueText}>{finishing ? "OPENING..." : isLast ? "GET STARTED" : "NEXT"}</Text>
                 <Ionicons name={isLast ? "checkmark-circle-outline" : "arrow-forward"} size={20} color="#fff" />
               </LinearGradient>
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   brand: { flexDirection: "row", alignItems: "center", gap: 9 },
   logo: { width: 42, height: 42 },
   brandName: { color: "#185b25", fontSize: 16, fontWeight: "900" },
-  brandPlace: { color: "#778077", marginTop: 1, fontSize: 7, fontWeight: "900", letterSpacing: 1.2 },
+  brandPlace: { color: "#778077", marginTop: 1, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
   skipButton: { minWidth: 58, minHeight: 38, alignItems: "center", justifyContent: "center", borderRadius: 20, backgroundColor: "rgba(255,255,255,0.86)", borderWidth: 1, borderColor: "#dce6dd" },
   skipText: { color: "#4d5d50", fontSize: 11, fontWeight: "800" },
   slide: { flex: 1, justifyContent: "center", paddingVertical: 10 },
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
   image: { width: "93%", height: 250 },
   imageCompact: { height: 190 },
   copy: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 25 },
-  eyebrow: { fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
+  eyebrow: { fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
   title: { color: "#183b20", marginTop: 7, fontSize: 27, fontWeight: "900", textAlign: "center" },
   description: { maxWidth: 390, color: "#59645b", marginTop: 10, fontSize: 13, lineHeight: 20, textAlign: "center" },
   footer: { paddingHorizontal: 20, paddingTop: 13, backgroundColor: "rgba(249,251,249,0.94)", borderTopWidth: 1, borderTopColor: "rgba(217,228,219,0.9)" },

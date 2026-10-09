@@ -92,7 +92,7 @@ export default function Profile() {
   return (
     <ImageBackground source={require("../../assets/images/background-bg.jpg")} style={styles.bg} resizeMode="cover">
       <SafeAreaView style={styles.safe}>
-        <GradientHeader title="Resident Profile" rightIcon="settings-outline" onRightPress={() => router.push("/settings")} />
+        <GradientHeader title="Resident Profile" onBack rightIcon="settings-outline" onRightPress={() => router.push("/settings")} />
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -138,23 +138,23 @@ function Info({ icon, label, value, last }) {
 
 const styles = StyleSheet.create({
   bg: { flex: 1 }, safe: { flex: 1 }, container: { padding: 16, paddingBottom: 105 }, loader: { marginTop: 70 },
-  identityCard: { alignItems: "center", padding: 22, marginBottom: 13, borderRadius: 21, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dce7de", elevation: 4 },
+  identityCard: { alignItems: "center", padding: 22, marginBottom: 13, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dce7de", elevation: 4 },
   avatar: { width: 106, height: 106, borderRadius: 35, borderWidth: 3, borderColor: "#2e7d32" },
   avatarFallback: { width: 106, height: 106, alignItems: "center", justifyContent: "center", borderRadius: 35, backgroundColor: "#eaf5eb", borderWidth: 2, borderColor: "#8fc397" },
   camera: { position: "absolute", right: -4, bottom: -3, width: 31, height: 31, alignItems: "center", justifyContent: "center", borderRadius: 11, backgroundColor: "#2e7d32", borderWidth: 3, borderColor: "#fff" },
   name: { color: "#203d26", marginTop: 14, textAlign: "center", fontSize: 21, fontWeight: "900" },
   verified: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 5, marginTop: 7, borderRadius: 20, backgroundColor: "#eaf6ec" },
-  verifiedText: { color: "#286a31", fontSize: 8, fontWeight: "900" },
-  address: { color: "#778179", marginTop: 8, textAlign: "center", fontSize: 10, lineHeight: 15 },
-  card: { padding: 16, marginBottom: 13, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 3 },
+  verifiedText: { color: "#286a31", fontSize: 10, fontWeight: "900" },
+  address: { color: "#778179", marginTop: 8, textAlign: "center", fontSize: 11, lineHeight: 15 },
+  card: { padding: 16, marginBottom: 13, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 3 },
   cardHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 },
-  cardTitle: { color: "#225d29", fontSize: 15, fontWeight: "900" }, cardHint: { color: "#858e87", marginTop: 2, fontSize: 8 },
+  cardTitle: { color: "#225d29", fontSize: 15, fontWeight: "900" }, cardHint: { color: "#858e87", marginTop: 2, fontSize: 10 },
   editSmall: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 10, backgroundColor: "#eaf6ec" },
-  editSmallText: { color: "#2e7d32", fontSize: 9, fontWeight: "900" },
+  editSmallText: { color: "#2e7d32", fontSize: 11, fontWeight: "900" },
   info: { flexDirection: "row", alignItems: "center", gap: 11, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#edf1ed" }, infoLast: { borderBottomWidth: 0 },
   infoIcon: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: "#edf6ee" }, infoCopy: { flex: 1 },
-  label: { color: "#858e87", fontSize: 8, fontWeight: "900", textTransform: "uppercase" }, value: { color: "#2e3b31", marginTop: 3, fontSize: 11, lineHeight: 16, fontWeight: "700" },
+  label: { color: "#858e87", fontSize: 10, fontWeight: "900", textTransform: "uppercase" }, value: { color: "#2e3b31", marginTop: 3, fontSize: 11, lineHeight: 16, fontWeight: "700" },
   settingsButton: { flexDirection: "row", alignItems: "center", gap: 11, padding: 15, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#dfe8e0", elevation: 3 },
   settingsIcon: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "#eaf6ec" },
-  settingsCopy: { flex: 1 }, settingsTitle: { color: "#2b3a2f", fontSize: 12, fontWeight: "900" }, settingsHint: { color: "#858e87", marginTop: 3, fontSize: 8, lineHeight: 12 },
+  settingsCopy: { flex: 1 }, settingsTitle: { color: "#2b3a2f", fontSize: 12, fontWeight: "900" }, settingsHint: { color: "#858e87", marginTop: 3, fontSize: 10, lineHeight: 12 },
 });

@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 23,
     backgroundColor: "rgba(255,255,255,0.97)",
-    borderRadius: 22,
+    borderRadius: 16,
     elevation: 7,
     shadowColor: "#153c1c",
     shadowOpacity: 0.15,

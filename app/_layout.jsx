@@ -1,12 +1,20 @@
 import { useEffect } from "react";
 import { Platform } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { registerSupabaseAuthLifecycle } from "../lib/supabase";
-import { configureNotificationChannel, getNotificationTarget, getPushPreference, registerForPushNotificationsAsync } from "../lib/pushNotifications";
+import {
+  claimNotificationResponse,
+  configureNotificationChannel,
+  getNotificationTarget,
+  getPushPreference,
+  markNotificationRead,
+  queueNotificationTarget,
+  registerForPushNotificationsAsync,
+} from "../lib/pushNotifications";
 
 if (Platform.OS !== "web") {
   Notifications.setNotificationHandler({
@@ -21,8 +29,6 @@ if (Platform.OS !== "web") {
 }
 
 export default function RootLayout() {
-  const router = useRouter();
-
   useEffect(() => {
     registerSupabaseAuthLifecycle();
     if (Platform.OS === "web") return undefined;
@@ -31,16 +37,18 @@ export default function RootLayout() {
       if (enabled) registerForPushNotificationsAsync().catch(() => {});
     });
 
-    const openResponse = (response) => {
-      const target = getNotificationTarget(response);
-      if (typeof target === "string" && target.startsWith("/")) {
-        setTimeout(() => router.push(target), 100);
-      }
+    // Each tapped notification is handled once: mark it read, then let the
+    // signed-in tab layout open its screen.
+    const openResponse = async (response) => {
+      if (!response || !(await claimNotificationResponse(response))) return;
+      const data = response.notification?.request?.content?.data || {};
+      markNotificationRead(data.notificationId);
+      queueNotificationTarget(getNotificationTarget(response) || "/notifications");
     };
-    Notifications.getLastNotificationResponseAsync().then((response) => response && openResponse(response));
+    Notifications.getLastNotificationResponseAsync().then(openResponse).catch(() => {});
     const subscription = Notifications.addNotificationResponseReceivedListener(openResponse);
     return () => subscription.remove();
-  }, [router]);
+  }, []);
 
   return (
     <SafeAreaProvider>
