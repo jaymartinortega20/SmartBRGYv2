@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import * as ExpoLinking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 
@@ -75,7 +76,7 @@ export default function Settings() {
     Alert.alert("Reset password", `Send a secure password reset link to ${user.email}?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Send link", onPress: async () => {
-        const { error } = await supabase.auth.resetPasswordForEmail(user.email);
+        const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: ExpoLinking.createURL("reset-password") });
         Alert.alert(error ? "Unable to send link" : "Reset link sent", error?.message || "Check your email for the password reset link.");
       } },
     ]);

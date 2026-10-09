@@ -63,6 +63,18 @@ Deno.serve(async (request) => {
     const result = await expoResponse.json();
     if (!expoResponse.ok) throw new Error(result?.errors?.[0]?.message || "Expo push service rejected the request");
 
+    // Turn off tokens for uninstalled apps so they are not retried forever.
+    const tickets = Array.isArray(result?.data) ? result.data : [];
+    const deadTokens = tickets
+      .map((ticket: { status?: string; details?: { error?: string } }, index: number) =>
+        ticket?.status === "error" && ticket?.details?.error === "DeviceNotRegistered" ? messages[index]?.to : null)
+      .filter(Boolean);
+    if (deadTokens.length) {
+      await supabase.from("push_tokens")
+        .update({ is_enabled: false, last_seen_at: new Date().toISOString() })
+        .in("expo_push_token", deadTokens);
+    }
+
     return new Response(JSON.stringify({ delivered: messages.length, result }), { status: 200, headers: jsonHeaders });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message || "Push delivery failed" }), { status: 500, headers: jsonHeaders });

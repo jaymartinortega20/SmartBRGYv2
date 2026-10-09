@@ -18,7 +18,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
-import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { isNetworkError, isSupabaseConfigured, supabase } from "../lib/supabase";
+import { getPushPreference, registerForPushNotificationsAsync } from "../lib/pushNotifications";
 
 export default function Login() {
   const router = useRouter();
@@ -89,6 +90,11 @@ export default function Login() {
         profile.role === "admin" ? "true" : "false",
       );
 
+      // Re-link this phone's push token to the account that just signed in.
+      getPushPreference()
+        .then((enabled) => (enabled ? registerForPushNotificationsAsync() : null))
+        .catch(() => undefined);
+
       if (profile.role === "admin") {
         router.replace("/admin");
       } else {
@@ -103,7 +109,11 @@ export default function Login() {
         ? "This resident account has been restricted by the barangay administrator. Contact the Barangay Tubod office for assistance."
         : lowerMessage.includes("email not confirmed")
           ? "Please verify your email before logging in."
-          : "The email address or password is incorrect.";
+          : isNetworkError(loginError)
+            ? "Unable to reach SmartBRGY. Check your internet connection and try again."
+            : lowerMessage.includes("is_banned") || lowerMessage.includes("column")
+              ? "The SmartBRGY database needs an update. Please contact the barangay administrator."
+              : "The email address or password is incorrect.";
       Alert.alert("Login failed", message);
     } finally {
       setLoading(false);

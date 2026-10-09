@@ -209,6 +209,15 @@ export default function ResidentHome() {
             ))}
           </View>
 
+          <TouchableOpacity activeOpacity={0.85} style={styles.assistantCard} onPress={() => router.navigate("/assistant")}>
+            <View style={styles.assistantIcon}><Ionicons name="sparkles" size={22} color="#fff" /></View>
+            <View style={styles.assistantCopy}>
+              <Text style={styles.assistantTitle}>Ask the SmartBRGY Assistant</Text>
+              <Text style={styles.assistantHint}>Requirements, fees, and request status — in Bisaya, Tagalog, or English</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#2e7d32" />
+          </TouchableOpacity>
+
           <Text style={styles.sectionTitle}>Your Activity</Text>
           <View style={styles.activityCard}>
             <ActivityItem icon="document-text-outline" label="Document requests" value={activity.documents} color="#b67a05" />
@@ -275,6 +284,11 @@ const styles = StyleSheet.create({
   heroMessage: { maxWidth: 225, color: "#edf8ee", marginTop: 11, fontSize: 10, lineHeight: 15 },
   heroLogo: { width: 84, height: 84, marginLeft: 7 },
   sectionHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  assistantCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 13, marginBottom: 16, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.97)", borderWidth: 1, borderColor: "#cfe6d2", elevation: 3 },
+  assistantIcon: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 13, backgroundColor: "#2e7d32" },
+  assistantCopy: { flex: 1 },
+  assistantTitle: { color: "#225d29", fontSize: 13, fontWeight: "900" },
+  assistantHint: { color: "#66736a", marginTop: 3, fontSize: 9, lineHeight: 13, fontWeight: "700" },
   sectionTitle: { color: "#213d27", fontSize: 16, fontWeight: "900" },
   sectionHint: { color: "#7d877f", marginTop: 2, fontSize: 9 },
   viewAll: { color: "#2e7d32", fontSize: 10, fontWeight: "900" },

@@ -43,6 +43,11 @@ Deno.serve(async (request) => {
       options: { data: { full_name: fullName, birthdate, address, purok, phone } },
     });
     if (signupError || !signup.user) throw new Error(signupError?.message || "Unable to create the resident account.");
+    // With email confirmation on, Supabase returns a placeholder user (no
+    // identities) instead of an error when the email is already registered.
+    if (Array.isArray(signup.user.identities) && signup.user.identities.length === 0) {
+      return respond({ error: "This email address is already registered. Log in or use Forgot Password." }, 409);
+    }
     createdUserId = signup.user.id;
 
     const extension = (file: File) => file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
@@ -54,7 +59,7 @@ Deno.serve(async (request) => {
     ]);
     if (frontError || backError) throw new Error(frontError?.message || backError?.message || "Unable to store ID attachments.");
 
-    const { error: profileError } = await service.from("profiles").update({
+    const { data: updatedProfiles, error: profileError } = await service.from("profiles").update({
       full_name: fullName,
       birthdate,
       address,
@@ -63,8 +68,9 @@ Deno.serve(async (request) => {
       email,
       id_front_path: frontPath,
       id_back_path: backPath,
-    }).eq("id", createdUserId);
+    }).eq("id", createdUserId).select("id");
     if (profileError) throw profileError;
+    if (!updatedProfiles?.length) throw new Error("The resident profile could not be created. Please try again.");
 
     return respond({ success: true, emailVerificationRequired: !signup.session });
   } catch (error) {

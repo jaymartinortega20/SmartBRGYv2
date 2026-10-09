@@ -29,6 +29,11 @@ Deno.serve(async (request) => {
     if (residentId === callerData.user.id) return reply({ error: "Administrators cannot restrict their own account" }, 400);
     if (action === "ban" && !String(reason || "").trim()) return reply({ error: "A ban reason is required" }, 400);
 
+    const { data: targetProfile, error: targetError } = await service.from("profiles").select("role").eq("id", residentId).maybeSingle();
+    if (targetError) throw targetError;
+    if (!targetProfile) return reply({ error: "Resident account not found" }, 404);
+    if (targetProfile.role !== "resident") return reply({ error: "Only resident accounts can be restricted" }, 400);
+
     const isBanned = action === "ban";
     const { error: authError } = await service.auth.admin.updateUserById(residentId, {
       ban_duration: isBanned ? "876000h" : "none",
