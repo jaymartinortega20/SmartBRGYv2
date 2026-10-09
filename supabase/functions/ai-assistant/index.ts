@@ -1,6 +1,6 @@
-// SmartBRGY AI assistant (Claude).
+// SmartBRGY AI assistant (Gemini free tier or Claude).
 //
-// The mobile app never talks to the Claude API directly: the API key lives only
+// The mobile app never talks to the AI provider directly: the API key lives only
 // in Supabase secrets. Every request is tied to a signed-in, non-banned resident
 // and counted against a daily limit (public.ai_consume_quota).
 //
@@ -20,7 +20,12 @@ const cors = {
 const reply = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const MODEL = Deno.env.get("AI_MODEL") || "claude-haiku-5-5";
+// AI_PROVIDER = "gemini" (free tier, default when GEMINI_API_KEY is set) or "claude".
+const PROVIDER = (Deno.env.get("AI_PROVIDER") || (Deno.env.get("GEMINI_API_KEY") ? "gemini" : "claude")).toLowerCase();
+const MODEL = Deno.env.get("AI_MODEL") || (PROVIDER === "gemini" ? "gemini-3.5-flash" : "claude-haiku-5-5");
+// Google may use free-tier Gemini requests to improve its products, so residents'
+// own records (name, request statuses) are not sent unless explicitly allowed.
+const SHARE_PERSONAL_CONTEXT = PROVIDER === "claude" || Deno.env.get("AI_ALLOW_PERSONAL_CONTEXT") === "true";
 const DAILY_LIMIT = Number(Deno.env.get("AI_DAILY_LIMIT") || "40");
 
 const INCIDENT_TYPES = ["Theft", "Fight", "Disturbance", "Harassment", "Suspicious Activity", "Property Damage", "Fire", "Accident", "Other"];
@@ -30,7 +35,40 @@ const LANGUAGES: Record<string, string> = { ceb: "Cebuano (Bisaya)", fil: "Filip
 
 const clip = (value: unknown, max: number) => String(value ?? "").trim().slice(0, max);
 
-async function callClaude(system: string, messages: { role: "user" | "assistant"; content: string }[], maxTokens: number) {
+type ChatMessage = { role: "user" | "assistant"; content: string };
+
+function callModel(system: string, messages: ChatMessage[], maxTokens: number) {
+  return PROVIDER === "gemini" ? callGemini(system, messages, maxTokens) : callClaude(system, messages, maxTokens);
+}
+
+async function callGemini(system: string, messages: ChatMessage[], maxTokens: number) {
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) throw new Error("AI_NOT_CONFIGURED");
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`, {
+    method: "POST",
+    headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: messages.map((message) => ({ role: message.role === "assistant" ? "model" : "user", parts: [{ text: message.content }] })),
+      // Extra room because newer Flash models count their thinking toward this limit.
+      generationConfig: { maxOutputTokens: maxTokens + 2048, responseMimeType: "application/json" },
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("Gemini API error", response.status, result?.error?.message);
+    throw new Error(response.status === 429 || response.status === 503 ? "AI_BUSY" : "AI_FAILED");
+  }
+  const parts = result?.candidates?.[0]?.content?.parts || [];
+  return parts
+    .filter((part: { text?: string; thought?: boolean }) => typeof part.text === "string" && !part.thought)
+    .map((part: { text: string }) => part.text)
+    .join("")
+    .trim();
+}
+
+async function callClaude(system: string, messages: ChatMessage[], maxTokens: number) {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("AI_NOT_CONFIGURED");
 
@@ -55,7 +93,7 @@ async function callClaude(system: string, messages: { role: "user" | "assistant"
     .trim();
 }
 
-// Claude is asked for JSON; this pulls the first JSON object out of the text.
+// The model is asked for JSON; this pulls the first JSON object out of the text.
 function parseJson(text: string): Record<string, unknown> | null {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
@@ -106,7 +144,7 @@ Deno.serve(async (request) => {
 Translate into ${LANGUAGES[target]}. Keep names, dates, times, places, phone numbers and amounts exactly as written.
 Use simple, respectful wording that ordinary residents and elderly people understand.
 Respond with JSON only: {"translation": "...", "summary": "one or two short sentences in ${LANGUAGES[target]}"}`;
-      const output = await callClaude(system, [{ role: "user", content: text }], 1500);
+      const output = await callModel(system, [{ role: "user", content: text }], 1500);
       const parsed = parseJson(output);
       return reply({
         translation: clip(parsed?.translation ?? output, 6000),
@@ -132,7 +170,7 @@ Respond with JSON only, using exactly these keys:
   "emergency": true if anyone is in immediate danger right now,
   "missing": list of short questions about important details that are missing (max 3)
 }`;
-      const output = await callClaude(system, [{ role: "user", content: text }], 900);
+      const output = await callModel(system, [{ role: "user", content: text }], 900);
       const parsed = parseJson(output);
       if (!parsed) return reply({ error: "The assistant could not prepare a draft. Please fill in the form manually." }, 502);
       const incidentType = INCIDENT_TYPES.includes(String(parsed.incident_type)) ? String(parsed.incident_type) : "Other";
@@ -162,16 +200,18 @@ Respond with JSON only, using exactly these keys:
       return reply({ error: "Type a question for the assistant." }, 400);
     }
 
+    const none = Promise.resolve({ data: [] as Record<string, unknown>[] });
     const [documentTypes, announcements, requests, reports, concerns] = await Promise.all([
       service.from("document_types").select("name,fee,requirements,instructions").eq("is_active", true).order("name"),
       service.from("announcements").select("title,announcement_type,message,event_date,event_time,location,contact_person,contact_number,priority,created_at").order("created_at", { ascending: false }).limit(8),
-      service.from("document_requests").select("status,copies,created_at,admin_note,document_types(name)").eq("resident_id", userId).order("created_at", { ascending: false }).limit(10),
-      service.from("incident_reports").select("reference_number,incident_type,status,created_at,scheduled_meeting_date,scheduled_meeting_time,meeting_venue").eq("resident_id", userId).order("created_at", { ascending: false }).limit(5),
-      service.from("concerns").select("ticket_number,category,status,updated_at").eq("resident_id", userId).order("updated_at", { ascending: false }).limit(5),
+      SHARE_PERSONAL_CONTEXT ? service.from("document_requests").select("status,copies,created_at,admin_note,document_types(name)").eq("resident_id", userId).order("created_at", { ascending: false }).limit(10) : none,
+      SHARE_PERSONAL_CONTEXT ? service.from("incident_reports").select("reference_number,incident_type,status,created_at,scheduled_meeting_date,scheduled_meeting_time,meeting_venue").eq("resident_id", userId).order("created_at", { ascending: false }).limit(5) : none,
+      SHARE_PERSONAL_CONTEXT ? service.from("concerns").select("ticket_number,category,status,updated_at").eq("resident_id", userId).order("updated_at", { ascending: false }).limit(5) : none,
     ]);
 
     const context = {
-      resident: { first_name: String(profile.full_name || "").split(/\s+/)[0] || "Resident", purok: profile.purok || null },
+      resident: SHARE_PERSONAL_CONTEXT ? { first_name: String(profile.full_name || "").split(/\s+/)[0] || "Resident", purok: profile.purok || null } : { first_name: "Resident" },
+      personal_records_available: SHARE_PERSONAL_CONTEXT,
       today: new Date().toLocaleDateString("en-PH", { timeZone: "Asia/Manila", year: "numeric", month: "long", day: "numeric", weekday: "long" }),
       documents_offered: (documentTypes.data || []).map((item) => ({ name: item.name, fee_php: Number(item.fee), requirements: item.requirements, instructions: item.instructions })),
       recent_announcements: (announcements.data || []).map((item) => ({ ...item, message: clip(item.message, 700) })),
@@ -189,6 +229,7 @@ How to answer:
 - You cannot change records, approve requests, or schedule meetings. Only barangay officials can.
 - If someone is in immediate danger (fire, violence, medical emergency), tell them to call the national emergency hotline 911 right away, then report in the app.
 - If the resident needs a barangay official to act on a community problem (garbage, flooding, streetlight, water, road, animals, complaints, assistance), offer a Help Desk handoff.
+- If personal_records_available is false, you cannot see the resident's own requests: for status questions, tell them to check the Documents tab (document requests), Report tab and Notifications (incident reports), or Help Desk tab (concerns).
 - Do not give legal advice; for disputes, explain they can report it and request a barangay meeting in the Report tab.
 
 Respond with JSON only:
@@ -199,7 +240,7 @@ Respond with JSON only:
 Barangay data (JSON):
 ${JSON.stringify(context)}`;
 
-    const output = await callClaude(system, messages, 800);
+    const output = await callModel(system, messages, 800);
     const parsed = parseJson(output);
     const handoff = parsed?.handoff && typeof parsed.handoff === "object" ? parsed.handoff as Record<string, unknown> : null;
     return reply({

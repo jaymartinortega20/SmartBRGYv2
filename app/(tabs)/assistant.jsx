@@ -25,7 +25,7 @@ import { getCurrentUserId } from "../../lib/supabase";
 const SUGGESTIONS = [
   "What do I need for a Barangay Clearance?",
   "Unsa ang requirements sa Certificate of Indigency?",
-  "What is the status of my document requests?",
+  "Paano mag-request ng Cedula sa app?",
   "Ano ang mga bagong announcement?",
 ];
 const MAX_STORED_MESSAGES = 30;
@@ -131,7 +131,7 @@ export default function Assistant() {
           >
             <View style={styles.notice}>
               <Ionicons name="sparkles" size={16} color="#6d4c00" />
-              <Text style={styles.noticeText}>AI answers can make mistakes. Official decisions, schedules, and approvals come only from Barangay Tubod officials.</Text>
+              <Text style={styles.noticeText}>AI answers can make mistakes, and official decisions come only from Barangay Tubod officials. Do not type ID numbers, passwords, or other sensitive personal details.</Text>
             </View>
 
             {messages.map((message) => (
