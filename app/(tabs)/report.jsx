@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -77,6 +77,7 @@ export default function Report() {
   const [showPreferredDate, setShowPreferredDate] = useState(false);
   const [showPreferredTime, setShowPreferredTime] = useState(false);
   const router = useRouter();
+  const scrollRef = useRef(null);
   const [myReports, setMyReports] = useState([]);
   const [showAllReports, setShowAllReports] = useState(false);
 
@@ -307,7 +308,9 @@ export default function Report() {
       uploadedPhotoPath = null;
       Alert.alert("Report submitted", `Reference number: ${reference}\n\nYou will receive a notification when the barangay updates your report${requestMeeting ? " or confirms the meeting" : ""}.`);
       resetForm();
-      loadMyReports();
+      await loadMyReports();
+      // My reports is at the top of the screen; bring the resident back to it.
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     } catch (error) {
       if (uploadedPhotoPath) {
         await supabase.storage.from("incident-photos").remove([uploadedPhotoPath]);
@@ -327,7 +330,7 @@ export default function Report() {
     <SafeAreaView style={styles.safe}>
       <GradientHeader title="Report Incident" />
       <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.notice}><Ionicons name="shield-checkmark" size={22} color="#2e7d32" /><Text style={styles.noticeText}><Text style={styles.noticeStrong}>Barangay incident reporting</Text>{"\n"}For immediate danger, contact the appropriate emergency authority.</Text></View>
         {myReports.length > 0 && (
           <View style={styles.myReports}>
@@ -380,7 +383,7 @@ export default function Report() {
           <Input placeholder="Specific landmark or house number *" value={landmark} onChangeText={setLandmark} maxLength={160} />
           <Input placeholder="Persons involved (optional)" value={personsInvolved} onChangeText={setPersonsInvolved} maxLength={200} />
           <Input placeholder="Describe what happened *" value={details} onChangeText={setDetails} maxLength={2000} multiline />
-          {photo ? <View style={styles.imagePicker}><Image source={{ uri: photo.uri }} style={styles.image} /><TouchableOpacity style={styles.removePhoto} onPress={() => setPhoto(null)} accessibilityLabel="Remove evidence photo"><Ionicons name="close" size={20} color="#fff" /></TouchableOpacity><TouchableOpacity style={styles.changePhoto} onPress={pickImage}><Ionicons name="camera-outline" size={16} color="#2e7d32" /><Text style={styles.changePhotoText}>Change photo</Text></TouchableOpacity></View> : <TouchableOpacity style={styles.imagePicker} onPress={pickImage}><Ionicons name="camera-outline" size={28} color="#2e7d32" /><Text style={styles.imageTitle}>Add supporting photo</Text><Text style={styles.imageHint}>Take a photo or choose from gallery · Maximum 8 MB</Text></TouchableOpacity>}
+          {photo ? <View style={styles.imagePicker}><Image source={{ uri: photo.uri }} style={styles.image} /><TouchableOpacity style={styles.removePhoto} onPress={() => setPhoto(null)} accessibilityLabel="Remove evidence photo"><Ionicons name="close" size={20} color="#fff" /></TouchableOpacity><TouchableOpacity style={styles.changePhoto} onPress={pickImage}><Ionicons name="camera-outline" size={16} color="#2e7d32" /><Text style={styles.changePhotoText}>Change photo</Text></TouchableOpacity></View> : <TouchableOpacity style={styles.imagePicker} onPress={pickImage}><Ionicons name="camera-outline" size={28} color="#2e7d32" /><Text style={styles.imageTitle}>Add supporting photo</Text><Text style={styles.imageHint}>Take a photo or choose from gallery · Maximum 5 MB</Text></TouchableOpacity>}
         </Section>
 
         <Section title="Barangay meeting" subtitle="Optional: request the barangay to call another person for a face-to-face meeting.">
