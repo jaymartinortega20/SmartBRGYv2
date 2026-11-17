@@ -41,31 +41,60 @@ function callModel(system: string, messages: ChatMessage[], maxTokens: number) {
   return PROVIDER === "gemini" ? callGemini(system, messages, maxTokens) : callClaude(system, messages, maxTokens);
 }
 
+// When Google's model is overloaded (503) or rate-limited (429), the assistant
+// waits a moment and retries, then switches to a lighter backup model, so
+// residents rarely see "busy". Set AI_FALLBACK_MODEL to change the backup,
+// or to "none" to turn the backup off.
+const FALLBACK_MODEL = Deno.env.get("AI_FALLBACK_MODEL") || "gemini-3.5-flash-lite";
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function callGemini(system: string, messages: ChatMessage[], maxTokens: number) {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("AI_NOT_CONFIGURED");
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`, {
-    method: "POST",
-    headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: messages.map((message) => ({ role: message.role === "assistant" ? "model" : "user", parts: [{ text: message.content }] })),
-      // Extra room because newer Flash models count their thinking toward this limit.
-      generationConfig: { maxOutputTokens: maxTokens + 2048, responseMimeType: "application/json" },
-    }),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    console.error("Gemini API error", response.status, result?.error?.message);
-    throw new Error(response.status === 429 || response.status === 503 ? "AI_BUSY" : [400, 401, 403, 404].includes(response.status) ? "AI_BAD_KEY_OR_MODEL" : "AI_FAILED");
+  const models = [MODEL];
+  if (FALLBACK_MODEL.toLowerCase() !== "none" && FALLBACK_MODEL !== MODEL) models.push(FALLBACK_MODEL);
+
+  let lastCode = "AI_FAILED";
+  for (const model of models) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: messages.map((message) => ({ role: message.role === "assistant" ? "model" : "user", parts: [{ text: message.content }] })),
+          // Extra room because newer Flash models count their thinking toward this limit.
+          generationConfig: { maxOutputTokens: maxTokens + 2048, responseMimeType: "application/json" },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok) {
+        const parts = result?.candidates?.[0]?.content?.parts || [];
+        return parts
+          .filter((part: { text?: string; thought?: boolean }) => typeof part.text === "string" && !part.thought)
+          .map((part: { text: string }) => part.text)
+          .join("")
+          .trim();
+      }
+
+      console.error("Gemini API error", model, response.status, result?.error?.message);
+      // A wrong or blocked key will not work on any model.
+      if (response.status === 401 || response.status === 403) throw new Error("AI_BAD_KEY_OR_MODEL");
+      if (response.status === 400 || response.status === 404) {
+        lastCode = "AI_BAD_KEY_OR_MODEL"; // model name not found: try the backup
+        break;
+      }
+      lastCode = response.status === 429 || response.status === 503 ? "AI_BUSY" : "AI_FAILED";
+      // Overloaded: one quick retry on the same model, then move to the backup.
+      if (attempt === 1 && (response.status === 503 || response.status >= 500)) {
+        await sleep(1200);
+        continue;
+      }
+      break;
+    }
   }
-  const parts = result?.candidates?.[0]?.content?.parts || [];
-  return parts
-    .filter((part: { text?: string; thought?: boolean }) => typeof part.text === "string" && !part.thought)
-    .map((part: { text: string }) => part.text)
-    .join("")
-    .trim();
+  throw new Error(lastCode);
 }
 
 async function callClaude(system: string, messages: ChatMessage[], maxTokens: number) {

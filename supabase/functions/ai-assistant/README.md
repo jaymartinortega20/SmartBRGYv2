@@ -41,3 +41,5 @@ npx supabase secrets set AI_MODEL=gemini-3.5-flash  # or e.g. gemini-3.5-flash-l
 ```
 
 If Google or Anthropic retires a model, set `AI_MODEL` to a current one; no app rebuild is needed.
+
+When Gemini says a model is overloaded ("high demand", 503) or rate-limited (429), the function retries once and then uses a backup model (`gemini-3.5-flash-lite` by default). Change it with `npx supabase secrets set AI_FALLBACK_MODEL=...`, or set it to `none` to turn the backup off.
