@@ -20,7 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import GradientHeader from "../components/GradientHeader";
-import { supabase } from "../lib/supabase";
+import { supabase, leaveToLogin } from "../lib/supabase";
 import {
   disablePushNotificationsAsync,
   disablePushNotificationsLocally,
@@ -91,7 +91,7 @@ export default function Settings() {
         try { await disablePushNotificationsLocally(); } catch {}
         await supabase.auth.signOut();
         await AsyncStorage.multiRemove(["currentUser", "isAdmin"]);
-        router.replace("/login");
+        leaveToLogin(router);
       } },
     ]);
   }
