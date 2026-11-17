@@ -371,7 +371,7 @@ export default function Report() {
         </View>
         <Section title="Incident information" subtitle="Tell the barangay what happened.">
           <Label text="Incident category *" />
-          <View style={styles.chips}>{TYPES.map((type) => <TouchableOpacity key={type} style={[styles.chip, incidentType === type && styles.chipActive]} onPress={() => setIncidentType(type)}><Text numberOfLines={1} textBreakStrategy="simple" style={[styles.chipText, incidentType === type && styles.chipTextActive]}>{type}</Text></TouchableOpacity>)}</View>
+          <View style={styles.chips}>{TYPES.map((type) => <TouchableOpacity key={type} style={[styles.chip, incidentType === type && styles.chipActive]} onPress={() => setIncidentType(type)}><Text textBreakStrategy="simple" style={[styles.chipText, incidentType === type && styles.chipTextActive]}>{`${type} `}</Text></TouchableOpacity>)}</View>
           {incidentType === "Other" && <Input placeholder="Specify incident type" value={otherType} onChangeText={setOtherType} maxLength={80} />}
           <Label text="Urgency *" />
           <View style={styles.chips}>{URGENCY.map((level) => <TouchableOpacity key={level} style={[styles.urgency, styles[`urgency_${level}`], urgency === level && styles.urgencySelected]} onPress={() => setUrgency(level)}><Text style={styles.urgencyText}>{level.toUpperCase()}</Text></TouchableOpacity>)}</View>
@@ -379,7 +379,7 @@ export default function Report() {
           <PickerModal visible={showIncidentDate} title="Select incident date" mode="date" value={incidentDate} maximumDate={new Date()} onClose={() => setShowIncidentDate(false)} onConfirm={setIncidentDate} />
           <PickerModal visible={showIncidentTime} title="Select approximate time" mode="time" value={incidentTime} onClose={() => setShowIncidentTime(false)} onConfirm={setIncidentTime} />
           <Label text="Area/Purok *" />
-          <View style={styles.chips}>{AREAS.map((value) => <TouchableOpacity key={value} style={[styles.chip, area === value && styles.chipActive]} onPress={() => setArea(value)}><Text numberOfLines={1} textBreakStrategy="simple" style={[styles.chipText, area === value && styles.chipTextActive]}>{value}</Text></TouchableOpacity>)}</View>
+          <View style={styles.chips}>{AREAS.map((value) => <TouchableOpacity key={value} style={[styles.chip, area === value && styles.chipActive]} onPress={() => setArea(value)}><Text textBreakStrategy="simple" style={[styles.chipText, area === value && styles.chipTextActive]}>{`${value} `}</Text></TouchableOpacity>)}</View>
           <Input placeholder="Specific landmark or house number *" value={landmark} onChangeText={setLandmark} maxLength={160} />
           <Input placeholder="Persons involved (optional)" value={personsInvolved} onChangeText={setPersonsInvolved} maxLength={200} />
           <Input placeholder="Describe what happened *" value={details} onChangeText={setDetails} maxLength={2000} multiline />

@@ -572,11 +572,10 @@ const Documents = () => {
                             onPress={() => updateSelection(document.id, { purpose: purposeOption, otherPurpose: purposeOption === "Other" ? config.otherPurpose : "" })}
                           >
                             <Text
-                              numberOfLines={1}
                               textBreakStrategy="simple"
                               style={[styles.chipText, config.purpose === purposeOption && styles.whiteText]}
                             >
-                              {purposeOption}
+                              {`${purposeOption} `}
                             </Text>
                           </TouchableOpacity>
                         ))}
