@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
 import GradientHeader from "../../components/GradientHeader";
-import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { isSupabaseConfigured, supabase, uniqueChannelName } from "../../lib/supabase";
 
 const CATEGORIES = ["Garbage Collection", "Drainage/Flooding", "Streetlight", "Road or Pathway Damage", "Water Supply", "Stray Animals", "Public Cleanliness", "Barangay Service Complaint", "Request for Assistance", "Suggestion", "Other"];
 const AREAS = ["Sitio Ibabaw", "Drilling", "Bulok-bulok", "Centro", "Gawad Kalinga", "Lawm Tabay", "Bakhaw", "Cajocson"];
@@ -116,7 +116,7 @@ export default function Feedback() {
   useEffect(() => { if (!ticketParam) lastAutoOpenedTicket.current = ""; }, [ticketParam]);
   useEffect(() => {
     if (!active?.id) return undefined;
-    const channel = supabase.channel(`helpdesk-${active.id}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "concern_messages", filter: `concern_id=eq.${active.id}` }, () => loadMessages()).on("postgres_changes", { event: "UPDATE", schema: "public", table: "concerns", filter: `id=eq.${active.id}` }, ({ new: row }) => { setActive((current) => current?.id === row.id ? { ...current, ...row } : current); loadTickets(); }).subscribe();
+    const channel = supabase.channel(uniqueChannelName(`helpdesk-${active.id}`)).on("postgres_changes", { event: "INSERT", schema: "public", table: "concern_messages", filter: `concern_id=eq.${active.id}` }, () => loadMessages()).on("postgres_changes", { event: "UPDATE", schema: "public", table: "concerns", filter: `id=eq.${active.id}` }, ({ new: row }) => { setActive((current) => current?.id === row.id ? { ...current, ...row } : current); loadTickets(); }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [active?.id, loadMessages, loadTickets]);
 

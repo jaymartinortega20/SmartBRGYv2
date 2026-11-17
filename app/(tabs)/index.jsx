@@ -18,7 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import GradientHeader from "../../components/GradientHeader";
-import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { isSupabaseConfigured, supabase, uniqueChannelName } from "../../lib/supabase";
 import { syncBadgeCount } from "../../lib/pushNotifications";
 import { GRADIENT } from "../../constants/theme";
 
@@ -143,14 +143,20 @@ export default function ResidentHome() {
   useEffect(() => {
     if (!residentId || !isSupabaseConfigured) return undefined;
     const refreshSilently = () => loadHome(false, true);
-    const channel = supabase.channel(`resident-home-${residentId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${residentId}` }, refreshSilently)
-      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, refreshSilently)
-      .on("postgres_changes", { event: "*", schema: "public", table: "document_requests", filter: `resident_id=eq.${residentId}` }, refreshSilently)
-      .on("postgres_changes", { event: "*", schema: "public", table: "incident_reports", filter: `resident_id=eq.${residentId}` }, refreshSilently)
-      .on("postgres_changes", { event: "*", schema: "public", table: "concerns", filter: `resident_id=eq.${residentId}` }, refreshSilently)
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    let channel = null;
+    try {
+      channel = supabase.channel(uniqueChannelName(`resident-home-${residentId}`))
+        .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${residentId}` }, refreshSilently)
+        .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, refreshSilently)
+        .on("postgres_changes", { event: "*", schema: "public", table: "document_requests", filter: `resident_id=eq.${residentId}` }, refreshSilently)
+        .on("postgres_changes", { event: "*", schema: "public", table: "incident_reports", filter: `resident_id=eq.${residentId}` }, refreshSilently)
+        .on("postgres_changes", { event: "*", schema: "public", table: "concerns", filter: `resident_id=eq.${residentId}` }, refreshSilently)
+        .subscribe();
+    } catch (realtimeError) {
+      // Live updates are a bonus; pull-to-refresh still works without them.
+      console.warn("Home live updates unavailable:", realtimeError?.message);
+    }
+    return () => { if (channel) supabase.removeChannel(channel); };
   }, [loadHome, residentId]);
 
   return (

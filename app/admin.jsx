@@ -16,7 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import GradientHeader from "../components/GradientHeader";
-import { supabase } from "../lib/supabase";
+import { supabase, leaveToLogin } from "../lib/supabase";
 
 const closed = new Set(["claimed", "resolved", "rejected", "closed", "cancelled"]);
 const openCount = (result, fallbackRows) => (
@@ -97,7 +97,7 @@ export default function MobileAdminDashboard() {
       { text: "Sign out", style: "destructive", onPress: async () => {
         await supabase.auth.signOut();
         await AsyncStorage.multiRemove(["currentUser", "isAdmin"]);
-        router.replace("/login");
+        leaveToLogin(router);
       } },
     ]);
   }
