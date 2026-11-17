@@ -571,7 +571,12 @@ const Documents = () => {
                             style={[styles.chip, config.purpose === purposeOption && styles.chipActive]}
                             onPress={() => updateSelection(document.id, { purpose: purposeOption, otherPurpose: purposeOption === "Other" ? config.otherPurpose : "" })}
                           >
-                            <Text style={[styles.chipText, config.purpose === purposeOption && styles.whiteText]}>{purposeOption}</Text>
+                            <Text
+                              textBreakStrategy="simple"
+                              style={[styles.chipText, config.purpose === purposeOption && styles.whiteText]}
+                            >
+                              {`${purposeOption} `}
+                            </Text>
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -920,7 +925,9 @@ const styles = StyleSheet.create({
   noteBox: { flexDirection: "row", gap: 10, backgroundColor: "#fff8e8", borderLeftWidth: 4, borderLeftColor: "#f9a825", borderRadius: 8, padding: 12, marginTop: 12 },
   noteTitle: { color: "#6d4c00", fontWeight: "800", marginBottom: 3 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 8 },
-  chip: { borderWidth: 1, borderColor: "#2e7d32", paddingVertical: 8, paddingHorizontal: 11, borderRadius: 18 },
+  // flexShrink 0: a chip keeps its full width and moves to the next line
+  // instead of being squeezed (Android cut "Business Requirement" short).
+  chip: { flexShrink: 0, maxWidth: "100%", borderWidth: 1, borderColor: "#2e7d32", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 18 },
   chipActive: { backgroundColor: "#2e7d32" },
   chipText: { color: "#2e7d32", fontSize: 12, fontWeight: "700" },
   input: { backgroundColor: "#f0f0f0", padding: 12, borderRadius: 10, color: "#000", marginBottom: 10 },
